@@ -138,7 +138,7 @@ server {
 
 - 健康检查：`curl -fsS http://127.0.0.1:8080/healthz` 或经 TLS 的 `https://relay.example.com/healthz`。
 - 日志：`journalctl -u shio-relay -f`；relay 不记 token、payload、content_type。
-- 磁盘/配额：`relay --config ... channel list`；`relay --config ... gc --dry-run` 先看淘汰量，再 `gc --now`。
+- 磁盘/配额：`relay --config ... channel list`；`relay --config ... stats --channel <cid>` 查看 seq、字节、quota 与成员 ack；`relay --config ... gc --dry-run` 先看淘汰量，再 `gc --now`。
 - 每日 GC timer（示例）：
 
 ```ini
@@ -183,7 +183,6 @@ sudo systemctl enable --now shio-relay-gc.timer
 
 - 内置 TLS 未实现；按本文用 Caddy/nginx。
 - 限流：per-token 每分钟固定窗口 + 并发 4；`/v1/enroll` 按 code 10/min、IP 30/min（`X-Forwarded-For`/`X-Real-IP`）限流。
-- CLI 暂未提供 `stats` 子命令；用 `channel list` 与 `info` API 查看状态。
 
 ## 10. 本地冒烟
 

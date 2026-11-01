@@ -119,22 +119,22 @@
           "desc": "A1 同一 code 与同一 X-Forwarded-For/IP 超限返回 429；测试通过。",
           "id": "A1",
           "requires_human": false,
-          "status": "unverified",
-          "verified_at": null,
-          "verified_by": null
+          "status": "pass",
+          "verified_at": "2026-11-01T13:45:29Z",
+          "verified_by": "agent"
         }
       ],
       "archived_at": null,
       "archived_git_head": null,
       "created_at": "2026-11-01T13:41:50Z",
-      "current_step": "S3",
+      "current_step": null,
       "depends": [
         {
           "type": "task",
           "uid": "tsk_01M6BNGMKVBWBKSVF2WPBE5TRP"
         }
       ],
-      "finished_at": null,
+      "finished_at": "2026-11-01T13:45:29Z",
       "goal": "实现 /v1/enroll code/IP 限流",
       "id": "T2",
       "line": "server",
@@ -148,7 +148,7 @@
       "plan": "hardening",
       "review_policy": "mixed",
       "skipped_count": 0,
-      "status": "in_progress",
+      "status": "done",
       "steps": [
         {
           "desc": "",
@@ -180,7 +180,7 @@
           "locked": false,
           "requires_review": false,
           "skipped_reason": null,
-          "status": "in_progress",
+          "status": "done",
           "title": "提交并更新边界文档"
         }
       ],
@@ -201,7 +201,7 @@
       "archived_at": null,
       "archived_git_head": null,
       "created_at": "2026-11-01T13:41:50Z",
-      "current_step": null,
+      "current_step": "S3",
       "depends": [
         {
           "type": "task",
@@ -222,8 +222,42 @@
       "plan": "hardening",
       "review_policy": "mixed",
       "skipped_count": 0,
-      "status": "todo",
-      "steps": [],
+      "status": "in_progress",
+      "steps": [
+        {
+          "desc": "",
+          "id": "S1",
+          "jump_meta": null,
+          "lock_reason": null,
+          "locked": false,
+          "requires_review": false,
+          "skipped_reason": null,
+          "status": "done",
+          "title": "实现 relay stats --channel"
+        },
+        {
+          "desc": "",
+          "id": "S2",
+          "jump_meta": null,
+          "lock_reason": null,
+          "locked": false,
+          "requires_review": false,
+          "skipped_reason": null,
+          "status": "done",
+          "title": "补 CLI stats 测试与文档"
+        },
+        {
+          "desc": "",
+          "id": "S3",
+          "jump_meta": null,
+          "lock_reason": null,
+          "locked": false,
+          "requires_review": false,
+          "skipped_reason": null,
+          "status": "in_progress",
+          "title": "跑测试并提交"
+        }
+      ],
       "title": "实现 relay stats --channel",
       "uid": "tsk_01M6BNGMMA0BYB4T6WMJHPMYRA"
     },

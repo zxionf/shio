@@ -32,6 +32,12 @@ enum Command {
         #[arg(long)]
         now: bool,
     },
+    /// channel 统计。
+    Stats {
+        /// channel ID。
+        #[arg(long)]
+        channel: String,
+    },
     /// channel 运维。
     Channel {
         #[command(subcommand)]
@@ -141,6 +147,11 @@ async fn run() -> shio_relay::Result<()> {
             let db = Db::open(&config.data)?;
             gc(&config, &db, dry_run, now)
         }
+        Command::Stats { channel } => {
+            let config = Config::load(&cli.config)?;
+            let db = Db::open(&config.data)?;
+            stats(&config, &db, &channel)
+        }
         Command::Channel { command } => {
             let config = Config::load(&cli.config)?;
             let db = Db::open(&config.data)?;
@@ -220,6 +231,37 @@ fn channel_list(db: &Db) -> shio_relay::Result<()> {
             channel.retained_from,
             channel.bytes,
             channel.quota_bytes
+        );
+    }
+    Ok(())
+}
+
+fn stats(config: &Config, db: &Db, channel: &str) -> shio_relay::Result<()> {
+    let channel_id = normalize_id(channel, "channel id must be 32 hex characters")?;
+    let channel = db
+        .with_conn(|conn| store::get_channel(conn, &channel_id))?
+        .ok_or(RelayError::NotFound)?;
+    let members = db.with_conn(|conn| store::active_members(conn, &channel_id))?;
+    let frame_ttl_secs = channel
+        .frame_ttl_secs
+        .unwrap_or_else(|| i64::try_from(config.frame_ttl_secs).unwrap_or(i64::MAX));
+    let max_payload_bytes = channel
+        .max_payload_bytes
+        .unwrap_or_else(|| i64::try_from(config.max_payload_bytes).unwrap_or(i64::MAX));
+    println!(
+        "channel={} next_seq={} retained_from={} bytes={} quota={} frame_ttl_secs={} max_payload_bytes={}",
+        channel.channel_id,
+        channel.next_seq,
+        channel.retained_from,
+        channel.bytes,
+        channel.quota_bytes,
+        frame_ttl_secs,
+        max_payload_bytes
+    );
+    for member in members {
+        println!(
+            "device={} acked_cursor={}",
+            member.device_id, member.acked_cursor
         );
     }
     Ok(())

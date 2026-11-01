@@ -67,6 +67,14 @@ fn cli_manages_channel_device_member_and_token() {
     assert_ok(&output);
     assert!(String::from_utf8_lossy(&output.stdout).contains(&channel));
 
+    let output = run(&config, &["stats", "--channel", &channel]);
+    assert_ok(&output);
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains(&channel));
+    assert!(stdout.contains("next_seq=1"));
+    assert!(stdout.contains(&format!("device={device}")));
+    assert!(stdout.contains("acked_cursor=0"));
+
     let output = run(&config, &["token", "rotate", "--device", &device]);
     assert_ok(&output);
     assert!(String::from_utf8_lossy(&output.stdout).contains("token:"));

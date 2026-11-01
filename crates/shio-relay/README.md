@@ -38,6 +38,8 @@ relay --config relay.toml member remove --channel <cid> --device <did>
 
 relay --config relay.toml gc --dry-run
 relay --config relay.toml gc --now
+
+relay --config relay.toml stats --channel <cid>
 ```
 
 ## HTTP API
