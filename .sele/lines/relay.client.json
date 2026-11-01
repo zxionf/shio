@@ -4,25 +4,25 @@
       "desc": "A1 shio-ffi 暴露 shio_sync_validate_frame 与 changes/offers/snapshot/progress 的 checked apply；C header/ABI 测试通过。",
       "id": "A1",
       "requires_human": false,
-      "status": "unverified",
-      "verified_at": null,
-      "verified_by": null
+      "status": "pass",
+      "verified_at": "2026-11-01T13:26:05Z",
+      "verified_by": "agent"
     },
     {
       "desc": "A2 Rust 客户端适配支持 db_id↔channel_id、push/pull、Idempotency-Key、Content-Type、progress、retained_from gap→快照重同步。",
       "id": "A2",
       "requires_human": false,
-      "status": "unverified",
-      "verified_at": null,
-      "verified_by": null
+      "status": "pass",
+      "verified_at": "2026-11-01T13:26:05Z",
+      "verified_by": "agent"
     },
     {
       "desc": "A3 错误 sender、progress 伪造、gap 重同步与两设备+relay 端到端测试通过；workspace 测试/sele check 通过。",
       "id": "A3",
       "requires_human": false,
-      "status": "unverified",
-      "verified_at": null,
-      "verified_by": null
+      "status": "pass",
+      "verified_at": "2026-11-01T13:26:05Z",
+      "verified_by": "agent"
     }
   ],
   "created_at": "2026-11-01T12:08:38Z",
@@ -36,7 +36,7 @@
     "docs"
   ],
   "plan": "relay",
-  "status": "active",
+  "status": "done",
   "tasks": [
     {
       "acceptance": [
@@ -208,15 +208,15 @@
           "desc": "A1 错误 sender、progress 伪造、retained_from gap→快照重同步与两设备+relay 端到端测试通过；workspace 测试与 sele check 通过。",
           "id": "A1",
           "requires_human": false,
-          "status": "unverified",
-          "verified_at": null,
-          "verified_by": null
+          "status": "pass",
+          "verified_at": "2026-11-01T13:26:04Z",
+          "verified_by": "agent"
         }
       ],
       "archived_at": null,
       "archived_git_head": null,
       "created_at": "2026-11-01T12:08:55Z",
-      "current_step": "S3",
+      "current_step": null,
       "depends": [
         {
           "type": "task",
@@ -231,7 +231,7 @@
           "uid": "tsk_01M6BG68DCNJSWWT25C1XYTZZ4"
         }
       ],
-      "finished_at": null,
+      "finished_at": "2026-11-01T13:26:05Z",
       "goal": "relay 客户端 gap/重同步与端到端回归",
       "id": "T3",
       "line": "client",
@@ -248,7 +248,7 @@
       "plan": "relay",
       "review_policy": "mixed",
       "skipped_count": 0,
-      "status": "in_progress",
+      "status": "done",
       "steps": [
         {
           "desc": "",
@@ -280,7 +280,7 @@
           "locked": false,
           "requires_review": false,
           "skipped_reason": null,
-          "status": "in_progress",
+          "status": "done",
           "title": "跑 cargo test --workspace 与 sele check 并提交"
         }
       ],

@@ -1,0 +1,44 @@
+{
+  "acceptance": [
+    {
+      "desc": "PA1 新增 shio-relay-client（或等价）实现真实 HTTP RelayTransport；两设备 + 真实 HTTP relay 端到端通过。",
+      "id": "PA1",
+      "requires_human": false,
+      "status": "unverified",
+      "verified_at": null,
+      "verified_by": null
+    },
+    {
+      "desc": "PA2 shio-relay 实现 per-token 并发 4、/v1/enroll code/IP 限流、relay stats --channel。",
+      "id": "PA2",
+      "requires_human": false,
+      "status": "unverified",
+      "verified_at": null,
+      "verified_by": null
+    },
+    {
+      "desc": "PA3 文档与测试更新；cargo test --workspace 与 sele check 通过。",
+      "id": "PA3",
+      "requires_human": false,
+      "status": "unverified",
+      "verified_at": null,
+      "verified_by": null
+    }
+  ],
+  "approved_at": "2026-11-01T13:41:27Z",
+  "approved_by": "human:zxionf",
+  "created_at": "2026-11-01T13:41:27Z",
+  "goal": "补齐 relay 的生产化缺口：真实 HTTP 客户端适配与 e2e、per-token 并发 4、enroll 限流、stats CLI。",
+  "id": "hardening",
+  "lines": [
+    {
+      "depends": [],
+      "id": "server"
+    },
+    {
+      "depends": [],
+      "id": "client"
+    }
+  ],
+  "status": "active"
+}

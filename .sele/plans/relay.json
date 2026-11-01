@@ -4,25 +4,25 @@
       "desc": "PA1 shio-relay 可启动，schema/API/token+membership/seq/幂等/ack/GC/quota/TTL 按 docs/relay.md v0.2 实现。",
       "id": "PA1",
       "requires_human": false,
-      "status": "unverified",
-      "verified_at": null,
-      "verified_by": null
+      "status": "pass",
+      "verified_at": "2026-11-01T13:28:56Z",
+      "verified_by": "agent"
     },
     {
       "desc": "PA2 shio-ffi 暴露 checked 帧校验；两设备 + relay 端到端跑通。",
       "id": "PA2",
       "requires_human": false,
-      "status": "unverified",
-      "verified_at": null,
-      "verified_by": null
+      "status": "pass",
+      "verified_at": "2026-11-01T13:28:56Z",
+      "verified_by": "agent"
     },
     {
       "desc": "PA3 TLS/部署文档与 relay.toml/systemd/Caddy 示例齐全；cargo test --workspace 与 sele check 通过。",
       "id": "PA3",
       "requires_human": false,
-      "status": "unverified",
-      "verified_at": null,
-      "verified_by": null
+      "status": "pass",
+      "verified_at": "2026-11-01T13:28:56Z",
+      "verified_by": "agent"
     }
   ],
   "approved_at": "2026-11-01T12:08:28Z",
@@ -44,5 +44,5 @@
       "id": "deploy"
     }
   ],
-  "status": "active"
+  "status": "done"
 }

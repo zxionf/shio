@@ -18,7 +18,7 @@ use tokio::net::TcpListener;
 use crate::config::Config;
 use crate::db::Db;
 use crate::error::RelayError;
-use crate::rate::RateLimiter;
+use crate::rate::{RateLimiter, RatePermit};
 use crate::store;
 use crate::util;
 
@@ -77,11 +77,11 @@ async fn healthz() -> &'static str {
     "ok"
 }
 
-#[derive(Debug, Clone)]
 struct Auth {
     device: store::Device,
     channel: store::Channel,
     membership: store::Membership,
+    _permit: RatePermit,
 }
 
 #[derive(Debug, Deserialize)]
@@ -253,6 +253,10 @@ fn authenticate(state: &AppState, headers: &HeaderMap, channel_id: &str) -> Resu
     if let Err(retry_after) = state.rate.check(&device.device_id, channel_id) {
         return Err(ApiError::too_many(retry_after));
     }
+    let permit = state
+        .rate
+        .acquire(&device.device_id)
+        .map_err(ApiError::too_many)?;
     let channel = state
         .db
         .with_conn(|conn| store::get_channel(conn, channel_id))
@@ -267,6 +271,7 @@ fn authenticate(state: &AppState, headers: &HeaderMap, channel_id: &str) -> Resu
         device,
         channel,
         membership,
+        _permit: permit,
     })
 }
 

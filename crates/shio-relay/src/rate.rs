@@ -1,16 +1,18 @@
 //! 固定窗口限流。
 
 use std::collections::HashMap;
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
 const WINDOW: Duration = Duration::from_secs(60);
+const MAX_IN_FLIGHT: u32 = 4;
 
 /// 每 device 的 channel 级与全局级限流器。
 pub struct RateLimiter {
     per_channel: u32,
     global: u32,
     inner: Mutex<HashMap<String, Window>>,
+    in_flight: Mutex<HashMap<String, u32>>,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -26,6 +28,7 @@ impl RateLimiter {
             per_channel,
             global: per_channel.saturating_mul(4).max(per_channel),
             inner: Mutex::new(HashMap::new()),
+            in_flight: Mutex::new(HashMap::new()),
         }
     }
 
@@ -44,6 +47,47 @@ impl RateLimiter {
             now,
         )?;
         Ok(())
+    }
+
+    /// 获取一个 per-token 并发 permit；上限 4。
+    pub fn acquire(self: &Arc<Self>, device_id: &str) -> Result<RatePermit, u64> {
+        let mut in_flight = match self.in_flight.lock() {
+            Ok(guard) => guard,
+            Err(_) => return Err(1),
+        };
+        let count = in_flight.entry(device_id.to_owned()).or_insert(0);
+        if *count >= MAX_IN_FLIGHT {
+            return Err(1);
+        }
+        *count += 1;
+        Ok(RatePermit {
+            limiter: Arc::clone(self),
+            device_id: device_id.to_owned(),
+        })
+    }
+}
+
+/// 持有期间占用一个 per-token 并发槽位。
+pub struct RatePermit {
+    limiter: Arc<RateLimiter>,
+    device_id: String,
+}
+
+impl Drop for RatePermit {
+    fn drop(&mut self) {
+        let mut in_flight = match self.limiter.in_flight.lock() {
+            Ok(guard) => guard,
+            Err(_) => return,
+        };
+        let remove = if let Some(count) = in_flight.get_mut(&self.device_id) {
+            *count = count.saturating_sub(1);
+            *count == 0
+        } else {
+            false
+        };
+        if remove {
+            in_flight.remove(&self.device_id);
+        }
     }
 }
 
@@ -81,5 +125,17 @@ mod tests {
         let retry = limiter.check("device", "channel").unwrap_err();
         assert!(retry > 0);
         assert!(limiter.check("device", "other").is_ok());
+    }
+
+    #[test]
+    fn in_flight_limit_is_enforced() {
+        let limiter = Arc::new(RateLimiter::new(60));
+        let mut permits = Vec::new();
+        for _ in 0..MAX_IN_FLIGHT {
+            permits.push(limiter.acquire("device").unwrap());
+        }
+        assert!(limiter.acquire("device").is_err());
+        permits.pop();
+        assert!(limiter.acquire("device").is_ok());
     }
 }

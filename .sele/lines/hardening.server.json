@@ -1,0 +1,246 @@
+{
+  "acceptance": [
+    {
+      "desc": "A1 per-token 并发上限 4；超限返回 429/Retry-After；单元/HTTP 测试通过。",
+      "id": "A1",
+      "requires_human": false,
+      "status": "unverified",
+      "verified_at": null,
+      "verified_by": null
+    },
+    {
+      "desc": "A2 /v1/enroll 按 code 与 X-Forwarded-For/IP 限流；超限 429。",
+      "id": "A2",
+      "requires_human": false,
+      "status": "unverified",
+      "verified_at": null,
+      "verified_by": null
+    },
+    {
+      "desc": "A3 relay stats --channel 输出 channel/seq/retained/bytes/quota 与成员 ack。",
+      "id": "A3",
+      "requires_human": false,
+      "status": "unverified",
+      "verified_at": null,
+      "verified_by": null
+    },
+    {
+      "desc": "A4 cargo test -p shio-relay、clippy/fmt、sele check 通过。",
+      "id": "A4",
+      "requires_human": false,
+      "status": "unverified",
+      "verified_at": null,
+      "verified_by": null
+    }
+  ],
+  "created_at": "2026-11-01T13:41:33Z",
+  "depends": [],
+  "goal": "补齐 relay 服务器的 per-token 并发 4、入网限流与 stats CLI。",
+  "id": "server",
+  "modules": [
+    "shio-relay",
+    "docs"
+  ],
+  "plan": "hardening",
+  "status": "active",
+  "tasks": [
+    {
+      "acceptance": [
+        {
+          "desc": "A1 per-token 并发上限 4；第 5 个请求 429；释放后可继续；测试通过。",
+          "id": "A1",
+          "requires_human": false,
+          "status": "unverified",
+          "verified_at": null,
+          "verified_by": null
+        }
+      ],
+      "archived_at": null,
+      "archived_git_head": null,
+      "created_at": "2026-11-01T13:41:50Z",
+      "current_step": "S3",
+      "depends": [],
+      "finished_at": null,
+      "goal": "实现 per-token 并发 4",
+      "id": "T1",
+      "line": "server",
+      "locked": {
+        "locked": false
+      },
+      "modules": [
+        "shio-relay"
+      ],
+      "pause_context": null,
+      "plan": "hardening",
+      "review_policy": "mixed",
+      "skipped_count": 0,
+      "status": "in_progress",
+      "steps": [
+        {
+          "desc": "",
+          "id": "S1",
+          "jump_meta": null,
+          "lock_reason": null,
+          "locked": false,
+          "requires_review": false,
+          "skipped_reason": null,
+          "status": "done",
+          "title": "RateLimiter 增加 in-flight 计数与 permit"
+        },
+        {
+          "desc": "",
+          "id": "S2",
+          "jump_meta": null,
+          "lock_reason": null,
+          "locked": false,
+          "requires_review": false,
+          "skipped_reason": null,
+          "status": "done",
+          "title": "鉴权路径接入 permit 并映射 429"
+        },
+        {
+          "desc": "",
+          "id": "S3",
+          "jump_meta": null,
+          "lock_reason": null,
+          "locked": false,
+          "requires_review": false,
+          "skipped_reason": null,
+          "status": "in_progress",
+          "title": "补并发限流单元测试并提交"
+        }
+      ],
+      "title": "实现 per-token 并发 4",
+      "uid": "tsk_01M6BNGMKVBWBKSVF2WPBE5TRP"
+    },
+    {
+      "acceptance": [
+        {
+          "desc": "A1 同一 code 与同一 X-Forwarded-For/IP 超限返回 429；测试通过。",
+          "id": "A1",
+          "requires_human": false,
+          "status": "unverified",
+          "verified_at": null,
+          "verified_by": null
+        }
+      ],
+      "archived_at": null,
+      "archived_git_head": null,
+      "created_at": "2026-11-01T13:41:50Z",
+      "current_step": null,
+      "depends": [
+        {
+          "type": "task",
+          "uid": "tsk_01M6BNGMKVBWBKSVF2WPBE5TRP"
+        }
+      ],
+      "finished_at": null,
+      "goal": "实现 /v1/enroll code/IP 限流",
+      "id": "T2",
+      "line": "server",
+      "locked": {
+        "locked": false
+      },
+      "modules": [
+        "shio-relay"
+      ],
+      "pause_context": null,
+      "plan": "hardening",
+      "review_policy": "mixed",
+      "skipped_count": 0,
+      "status": "todo",
+      "steps": [],
+      "title": "实现 /v1/enroll code/IP 限流",
+      "uid": "tsk_01M6BNGMM2CWC48663NG4HT1JY"
+    },
+    {
+      "acceptance": [
+        {
+          "desc": "A1 输出 channel/seq/retained/bytes/quota 与成员 ack；CLI 测试通过。",
+          "id": "A1",
+          "requires_human": false,
+          "status": "unverified",
+          "verified_at": null,
+          "verified_by": null
+        }
+      ],
+      "archived_at": null,
+      "archived_git_head": null,
+      "created_at": "2026-11-01T13:41:50Z",
+      "current_step": null,
+      "depends": [
+        {
+          "type": "task",
+          "uid": "tsk_01M6BNGMM2CWC48663NG4HT1JY"
+        }
+      ],
+      "finished_at": null,
+      "goal": "实现 relay stats --channel",
+      "id": "T3",
+      "line": "server",
+      "locked": {
+        "locked": false
+      },
+      "modules": [
+        "shio-relay"
+      ],
+      "pause_context": null,
+      "plan": "hardening",
+      "review_policy": "mixed",
+      "skipped_count": 0,
+      "status": "todo",
+      "steps": [],
+      "title": "实现 relay stats --channel",
+      "uid": "tsk_01M6BNGMMA0BYB4T6WMJHPMYRA"
+    },
+    {
+      "acceptance": [
+        {
+          "desc": "A1 并发/入网限流/stats 测试与文档齐全；cargo test -p shio-relay、clippy/fmt、sele check 通过。",
+          "id": "A1",
+          "requires_human": false,
+          "status": "unverified",
+          "verified_at": null,
+          "verified_by": null
+        }
+      ],
+      "archived_at": null,
+      "archived_git_head": null,
+      "created_at": "2026-11-01T13:41:50Z",
+      "current_step": null,
+      "depends": [
+        {
+          "type": "task",
+          "uid": "tsk_01M6BNGMKVBWBKSVF2WPBE5TRP"
+        },
+        {
+          "type": "task",
+          "uid": "tsk_01M6BNGMM2CWC48663NG4HT1JY"
+        },
+        {
+          "type": "task",
+          "uid": "tsk_01M6BNGMMA0BYB4T6WMJHPMYRA"
+        }
+      ],
+      "finished_at": null,
+      "goal": "补 server hardening 测试与文档",
+      "id": "T4",
+      "line": "server",
+      "locked": {
+        "locked": false
+      },
+      "modules": [
+        "shio-relay",
+        "docs"
+      ],
+      "pause_context": null,
+      "plan": "hardening",
+      "review_policy": "mixed",
+      "skipped_count": 0,
+      "status": "todo",
+      "steps": [],
+      "title": "补 server hardening 测试与文档",
+      "uid": "tsk_01M6BNGMMJNCKZX9WMJBTACZJ8"
+    }
+  ]
+}
