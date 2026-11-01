@@ -185,3 +185,34 @@ sudo systemctl enable --now shio-relay-gc.timer
 - 当前限流为每分钟固定窗口；per-token 并发上限 4 尚未实现。
 - `/v1/enroll` 尚未做 IP/code 级限流。
 - CLI 暂未提供 `stats` 子命令；用 `channel list` 与 `info` API 查看状态。
+
+## 10. 本地冒烟
+
+```bash
+cargo build -p shio-relay
+
+dir=$(mktemp -d)
+cat > "$dir/relay.toml" <<EOF
+listen = "127.0.0.1:8080"
+data = "$dir/relay.db"
+max_payload_bytes = 1024
+channel_quota_bytes = 4096
+EOF
+
+./target/debug/relay --config "$dir/relay.toml" channel new --id cccccccccccccccccccccccccccccccc
+./target/debug/relay --config "$dir/relay.toml" device new --device-id dddddddddddddddddddddddddddddddd
+./target/debug/relay --config "$dir/relay.toml" member add \
+  --channel cccccccccccccccccccccccccccccccc \
+  --device dddddddddddddddddddddddddddddddd
+./target/debug/relay --config "$dir/relay.toml" channel list
+./target/debug/relay --config "$dir/relay.toml" gc --dry-run
+
+./target/debug/relay --config "$dir/relay.toml" serve &
+curl -fsS http://127.0.0.1:8080/healthz
+# ok
+kill %1
+```
+
+- `device new` 的 token 只显示一次；用同一个 token 调 `/v1/channels/{cid}/frames` 验证推帧。
+- `channel list` 应看到 `next=1 retained=1 bytes=0`。
+- `gc --dry-run` 应输出 `deleted=0`（空 channel）。
