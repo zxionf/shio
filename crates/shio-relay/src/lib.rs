@@ -9,6 +9,7 @@
 pub mod config;
 pub mod db;
 pub mod error;
+pub mod rate;
 pub mod schema;
 pub mod server;
 pub mod store;

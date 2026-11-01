@@ -7,8 +7,6 @@
     clippy::indexing_slicing
 )]
 
-use std::sync::Arc;
-
 use axum::body::Body;
 use axum::http::{Request, StatusCode};
 use axum::Router;
@@ -34,11 +32,16 @@ fn auth(token: &str) -> String {
 }
 
 async fn setup() -> Ctx {
+    setup_with_rate(60).await
+}
+
+async fn setup_with_rate(rate_limit_per_min: u32) -> Ctx {
     let dir = tempfile::tempdir().unwrap();
     let config = Config {
         data: dir.path().join("relay.db"),
         max_payload_bytes: 1024,
         channel_quota_bytes: 4096,
+        rate_limit_per_min,
         ..Config::default()
     };
     let db = Db::open(&config.data).unwrap();
@@ -73,10 +76,7 @@ async fn setup() -> Ctx {
     db.with_conn(|conn| store::upsert_membership(conn, &channel, &device_b, 1_000))
         .unwrap();
 
-    let app = router(AppState {
-        config: Arc::new(config),
-        db: db.clone(),
-    });
+    let app = router(AppState::new(config, db.clone()));
     Ctx {
         _dir: dir,
         app,
@@ -562,4 +562,43 @@ async fn enrollment_and_membership_flow() {
     let (status, body) = send(&ctx.app, info).await;
     assert_eq!(status, StatusCode::FORBIDDEN);
     assert_eq!(body["error"], "not_a_member");
+}
+
+#[tokio::test]
+async fn rate_limit_returns_429_with_retry_after() {
+    let ctx = setup_with_rate(1).await;
+    let (status, _) = send(&ctx.app, get_frames_req(&ctx, &ctx.token_a, "cursor=0")).await;
+    assert_eq!(status, StatusCode::OK);
+
+    let response = ctx
+        .app
+        .clone()
+        .oneshot(get_frames_req(&ctx, &ctx.token_a, "cursor=0"))
+        .await
+        .unwrap();
+    assert_eq!(response.status(), StatusCode::TOO_MANY_REQUESTS);
+    assert!(response.headers().get("retry-after").is_some());
+}
+
+#[tokio::test]
+async fn quota_full_returns_507() {
+    let ctx = setup().await;
+    let channel = "7".repeat(32);
+    ctx.db
+        .with_conn(|conn| store::insert_channel(conn, &channel, 4, Some(3600), Some(1024), 1_000))
+        .unwrap();
+    ctx.db
+        .with_conn(|conn| store::upsert_membership(conn, &channel, &ctx.device_a, 1_000))
+        .unwrap();
+    let req = Request::builder()
+        .method("POST")
+        .uri(format!("/v1/channels/{channel}/frames"))
+        .header("authorization", auth(&ctx.token_a))
+        .header("idempotency-key", "q")
+        .header("content-type", "text/plain")
+        .body(Body::from("hello"))
+        .unwrap();
+    let (status, body) = send(&ctx.app, req).await;
+    assert_eq!(status, StatusCode::INSUFFICIENT_STORAGE);
+    assert_eq!(body["error"], "storage_full");
 }

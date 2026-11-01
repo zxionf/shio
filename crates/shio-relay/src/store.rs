@@ -173,6 +173,17 @@ pub struct FramePage {
     pub retained_from: i64,
 }
 
+/// GC 结果。
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct GcReport {
+    /// channel ID。
+    pub channel_id: String,
+    /// 删除的帧数。
+    pub deleted: usize,
+    /// GC 后的最小可读 seq。
+    pub retained_from: i64,
+}
+
 /// 插入 channel。
 pub fn insert_channel(
     conn: &Connection,
@@ -575,6 +586,177 @@ fn enroll_code(conn: &Connection, code_hash: &str) -> Result<Option<EnrollCode>>
     Ok(code)
 }
 
+/// GC 一个 channel；返回删除统计。
+pub fn gc_channel(
+    conn: &mut Connection,
+    channel_id: &str,
+    default_ttl: i64,
+    now: i64,
+    dry_run: bool,
+) -> Result<GcReport> {
+    let tx = conn.transaction()?;
+    let report = gc_channel_tx(&tx, channel_id, default_ttl, now, dry_run)?;
+    if dry_run {
+        tx.rollback()?;
+    } else {
+        tx.commit()?;
+    }
+    Ok(report)
+}
+
+fn gc_channel_tx(
+    conn: &Connection,
+    channel_id: &str,
+    default_ttl: i64,
+    now: i64,
+    dry_run: bool,
+) -> Result<GcReport> {
+    let channel = get_channel(conn, channel_id)?.ok_or(RelayError::NotFound)?;
+    let ttl = channel.frame_ttl_secs.unwrap_or(default_ttl).max(0);
+    let members = active_members(conn, channel_id)?;
+    let mut stmt = conn.prepare(
+        "SELECT seq, sender, created_at, LENGTH(payload)
+         FROM frames WHERE channel_id = ?1 AND seq >= ?2
+         ORDER BY seq LIMIT 1000",
+    )?;
+    let rows = stmt.query_map(params![channel_id, channel.retained_from], |row| {
+        Ok((
+            row.get::<_, i64>(0)?,
+            row.get::<_, String>(1)?,
+            row.get::<_, i64>(2)?,
+            row.get::<_, i64>(3)?,
+        ))
+    })?;
+    let mut frames = Vec::new();
+    for row in rows {
+        frames.push(row?);
+    }
+    drop(stmt);
+
+    let mut bytes = channel.bytes;
+    let mut delete_through = None;
+    let mut deleted = 0usize;
+    let mut deleted_bytes = 0i64;
+    for (seq, sender, created_at, len) in frames {
+        let ttl_ok = now.saturating_sub(created_at) >= ttl;
+        let quota_ok = bytes > channel.quota_bytes;
+        let others: Vec<&Membership> = members
+            .iter()
+            .filter(|member| member.device_id != sender)
+            .collect();
+        let ack_ok = !others.is_empty() && others.iter().all(|member| member.acked_cursor >= seq);
+        if ttl_ok || quota_ok || ack_ok {
+            bytes = bytes.saturating_sub(len);
+            deleted_bytes = deleted_bytes.saturating_add(len);
+            deleted += 1;
+            delete_through = Some(seq);
+        } else {
+            break;
+        }
+    }
+    let retained_from = delete_through
+        .map(|seq| seq.saturating_add(1))
+        .unwrap_or(channel.retained_from);
+    if !dry_run {
+        if let Some(through) = delete_through {
+            conn.execute(
+                "DELETE FROM frames WHERE channel_id = ?1 AND seq <= ?2",
+                params![channel_id, through],
+            )?;
+            conn.execute(
+                "UPDATE channels SET retained_from = ?1, bytes = MAX(bytes - ?2, 0)
+                 WHERE channel_id = ?3",
+                params![retained_from, deleted_bytes, channel_id],
+            )?;
+        }
+    }
+    Ok(GcReport {
+        channel_id: channel_id.to_owned(),
+        deleted,
+        retained_from,
+    })
+}
+
+/// GC 所有 channel；`dry_run` 只报告不删除。
+pub fn gc_all(
+    conn: &mut Connection,
+    default_ttl: i64,
+    now: i64,
+    dry_run: bool,
+) -> Result<Vec<GcReport>> {
+    let ids = list_channels(conn)?
+        .into_iter()
+        .map(|channel| channel.channel_id)
+        .collect::<Vec<_>>();
+    let mut reports = Vec::new();
+    for channel_id in ids {
+        let mut report = gc_channel(conn, &channel_id, default_ttl, now, dry_run)?;
+        let mut deleted = report.deleted;
+        let mut retained_from = report.retained_from;
+        while !dry_run && report.deleted > 0 {
+            report = gc_channel(conn, &channel_id, default_ttl, now, dry_run)?;
+            deleted += report.deleted;
+            retained_from = report.retained_from;
+        }
+        reports.push(GcReport {
+            channel_id,
+            deleted,
+            retained_from,
+        });
+    }
+    Ok(reports)
+}
+
+/// 清空 24h 前的幂等键。
+pub fn expire_idempotency_keys(conn: &Connection, cutoff: i64) -> Result<usize> {
+    let changed = conn.execute(
+        "UPDATE frames SET idem_key = NULL WHERE idem_key IS NOT NULL AND created_at <= ?1",
+        params![cutoff],
+    )?;
+    Ok(changed)
+}
+
+fn free_quota(conn: &Connection, channel: &Channel, needed: i64) -> Result<Channel> {
+    let mut bytes = channel.bytes;
+    if bytes.saturating_add(needed) <= channel.quota_bytes {
+        return Ok(channel.clone());
+    }
+    let mut stmt = conn.prepare(
+        "SELECT seq, LENGTH(payload) FROM frames
+         WHERE channel_id = ?1 AND seq >= ?2 ORDER BY seq",
+    )?;
+    let rows = stmt.query_map(params![channel.channel_id, channel.retained_from], |row| {
+        Ok((row.get::<_, i64>(0)?, row.get::<_, i64>(1)?))
+    })?;
+    let mut delete_through = None;
+    let mut deleted_bytes = 0i64;
+    for row in rows {
+        let (seq, len) = row?;
+        bytes = bytes.saturating_sub(len);
+        deleted_bytes = deleted_bytes.saturating_add(len);
+        delete_through = Some(seq);
+        if bytes.saturating_add(needed) <= channel.quota_bytes {
+            break;
+        }
+    }
+    drop(stmt);
+    if bytes.saturating_add(needed) > channel.quota_bytes {
+        return Err(RelayError::StorageFull);
+    }
+    if let Some(through) = delete_through {
+        conn.execute(
+            "DELETE FROM frames WHERE channel_id = ?1 AND seq <= ?2",
+            params![channel.channel_id, through],
+        )?;
+        conn.execute(
+            "UPDATE channels SET retained_from = ?1, bytes = MAX(bytes - ?2, 0)
+             WHERE channel_id = ?3",
+            params![through.saturating_add(1), deleted_bytes, channel.channel_id],
+        )?;
+    }
+    get_channel(conn, &channel.channel_id)?.ok_or(RelayError::NotFound)
+}
+
 /// 追加一帧；同 sender + idem_key 重试返回原 seq。
 #[allow(clippy::too_many_arguments)]
 pub fn append_frame(
@@ -611,6 +793,7 @@ pub fn append_frame(
             "idempotency key reused with different payload".to_owned(),
         ));
     }
+    let channel = free_quota(&tx, &channel, payload_len)?;
     let seq = channel.next_seq;
     tx.execute(
         "INSERT INTO frames (channel_id, seq, sender, content_type, payload, created_at, idem_key)
@@ -719,6 +902,8 @@ mod tests {
 
     const CHANNEL: &str = "cccccccccccccccccccccccccccccccc";
     const DEVICE: &str = "dddddddddddddddddddddddddddddddd";
+    const DEVICE_B: &str = "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee";
+    const QUOTA_CHANNEL: &str = "ffffffffffffffffffffffffffffffff";
     const NOW: i64 = 1_000;
 
     fn open() -> (tempfile::TempDir, Db) {
@@ -733,6 +918,13 @@ mod tests {
         db.with_conn(|conn| insert_device(conn, DEVICE, &sha256_hex(b"token"), NOW))
             .unwrap();
         db.with_conn(|conn| upsert_membership(conn, CHANNEL, DEVICE, NOW))
+            .unwrap();
+    }
+
+    fn add_device(db: &Db, device_id: &str, token: &str) {
+        db.with_conn(|conn| insert_device(conn, device_id, &sha256_hex(token.as_bytes()), NOW))
+            .unwrap();
+        db.with_conn(|conn| upsert_membership(conn, CHANNEL, device_id, NOW))
             .unwrap();
     }
 
@@ -867,5 +1059,160 @@ mod tests {
             .unwrap();
         assert_eq!(channel.next_seq, 1);
         assert_eq!(channel.bytes, 0);
+    }
+
+    #[test]
+    fn gc_deletes_acked_prefix_and_dry_run_is_read_only() {
+        let (_dir, db) = open();
+        seed(&db);
+        add_device(&db, DEVICE_B, "token-b");
+        for (index, payload) in [b"a".as_slice(), b"b", b"c"].into_iter().enumerate() {
+            db.with_conn_mut(|conn| {
+                append_frame(
+                    conn,
+                    CHANNEL,
+                    DEVICE,
+                    "text/plain",
+                    payload,
+                    &format!("k{index}"),
+                    1024,
+                    NOW,
+                )
+            })
+            .unwrap();
+        }
+        db.with_conn(|conn| ack_membership(conn, CHANNEL, DEVICE_B, 2))
+            .unwrap();
+
+        let dry = db
+            .with_conn_mut(|conn| gc_channel(conn, CHANNEL, 3600, NOW, true))
+            .unwrap();
+        assert_eq!(dry.deleted, 2);
+        assert_eq!(dry.retained_from, 3);
+        assert_eq!(
+            db.with_conn(|conn| fetch_frames(conn, CHANNEL, 0, 10, None))
+                .unwrap()
+                .frames
+                .len(),
+            3
+        );
+
+        let report = db
+            .with_conn_mut(|conn| gc_channel(conn, CHANNEL, 3600, NOW, false))
+            .unwrap();
+        assert_eq!(report.deleted, 2);
+        assert_eq!(report.retained_from, 3);
+        let page = db
+            .with_conn(|conn| fetch_frames(conn, CHANNEL, 0, 10, None))
+            .unwrap();
+        assert_eq!(page.frames.len(), 1);
+        assert_eq!(page.frames[0].seq, 3);
+        assert_eq!(page.retained_from, 3);
+    }
+
+    #[test]
+    fn gc_ttl_deletes_without_ack() {
+        let (_dir, db) = open();
+        seed(&db);
+        db.with_conn_mut(|conn| {
+            append_frame(conn, CHANNEL, DEVICE, "text/plain", b"a", "k1", 1024, NOW)
+        })
+        .unwrap();
+        let report = db
+            .with_conn_mut(|conn| gc_channel(conn, CHANNEL, 10, NOW + 3601, false))
+            .unwrap();
+        assert_eq!(report.deleted, 1);
+        assert_eq!(report.retained_from, 2);
+    }
+
+    #[test]
+    fn quota_evicts_oldest_prefix_and_rejects_oversize() {
+        let (_dir, db) = open();
+        db.with_conn(|conn| insert_channel(conn, QUOTA_CHANNEL, 10, Some(3600), Some(20), NOW))
+            .unwrap();
+        db.with_conn(|conn| insert_device(conn, DEVICE, &sha256_hex(b"token"), NOW))
+            .unwrap();
+        db.with_conn(|conn| upsert_membership(conn, QUOTA_CHANNEL, DEVICE, NOW))
+            .unwrap();
+
+        db.with_conn_mut(|conn| {
+            append_frame(
+                conn,
+                QUOTA_CHANNEL,
+                DEVICE,
+                "text/plain",
+                b"123456",
+                "k1",
+                20,
+                NOW,
+            )
+        })
+        .unwrap();
+        let second = db
+            .with_conn_mut(|conn| {
+                append_frame(
+                    conn,
+                    QUOTA_CHANNEL,
+                    DEVICE,
+                    "text/plain",
+                    b"abcdef",
+                    "k2",
+                    20,
+                    NOW,
+                )
+            })
+            .unwrap();
+        assert_eq!(second.seq, 2);
+        let page = db
+            .with_conn(|conn| fetch_frames(conn, QUOTA_CHANNEL, 0, 10, None))
+            .unwrap();
+        assert_eq!(page.frames.len(), 1);
+        assert_eq!(page.frames[0].seq, 2);
+        assert_eq!(page.retained_from, 2);
+
+        assert!(matches!(
+            db.with_conn_mut(|conn| {
+                append_frame(
+                    conn,
+                    QUOTA_CHANNEL,
+                    DEVICE,
+                    "text/plain",
+                    &[0u8; 15],
+                    "k3",
+                    20,
+                    NOW,
+                )
+            }),
+            Err(RelayError::StorageFull)
+        ));
+        assert_eq!(
+            db.with_conn(|conn| fetch_frames(conn, QUOTA_CHANNEL, 0, 10, None))
+                .unwrap()
+                .frames
+                .len(),
+            1
+        );
+    }
+
+    #[test]
+    fn idempotency_keys_expire() {
+        let (_dir, db) = open();
+        seed(&db);
+        db.with_conn_mut(|conn| {
+            append_frame(conn, CHANNEL, DEVICE, "text/plain", b"a", "k1", 1024, NOW)
+        })
+        .unwrap();
+        assert_eq!(
+            db.with_conn(|conn| expire_idempotency_keys(conn, NOW))
+                .unwrap(),
+            1
+        );
+        let second = db
+            .with_conn_mut(|conn| {
+                append_frame(conn, CHANNEL, DEVICE, "text/plain", b"b", "k1", 1024, NOW)
+            })
+            .unwrap();
+        assert_eq!(second.seq, 2);
+        assert!(!second.duplicate);
     }
 }

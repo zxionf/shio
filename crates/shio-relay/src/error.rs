@@ -34,6 +34,9 @@ pub enum RelayError {
     /// payload 超过上限。
     #[error("payload too large")]
     PayloadTooLarge,
+    /// channel 配额或磁盘空间不足。
+    #[error("storage full")]
+    StorageFull,
     /// 凭据或入网码已过期。
     #[error("expired: {0}")]
     Expired(&'static str),

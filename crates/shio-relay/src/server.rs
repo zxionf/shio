@@ -18,6 +18,7 @@ use tokio::net::TcpListener;
 use crate::config::Config;
 use crate::db::Db;
 use crate::error::RelayError;
+use crate::rate::RateLimiter;
 use crate::store;
 use crate::util;
 
@@ -28,6 +29,20 @@ pub struct AppState {
     pub config: Arc<Config>,
     /// sqlite 连接。
     pub db: Db,
+    /// 每 device 限流器。
+    pub rate: Arc<RateLimiter>,
+}
+
+impl AppState {
+    /// 用配置与数据库构造状态。
+    pub fn new(config: Config, db: Db) -> Self {
+        let rate = Arc::new(RateLimiter::new(config.rate_limit_per_min));
+        Self {
+            config: Arc::new(config),
+            db,
+            rate,
+        }
+    }
 }
 
 /// 构造路由。
@@ -98,6 +113,7 @@ struct ApiError {
     status: StatusCode,
     code: &'static str,
     message: String,
+    retry_after: Option<u64>,
 }
 
 impl ApiError {
@@ -106,6 +122,16 @@ impl ApiError {
             status,
             code,
             message: message.into(),
+            retry_after: None,
+        }
+    }
+
+    fn too_many(retry_after: u64) -> Self {
+        Self {
+            status: StatusCode::TOO_MANY_REQUESTS,
+            code: "rate_limited",
+            message: "rate limit exceeded".to_owned(),
+            retry_after: Some(retry_after),
         }
     }
 
@@ -156,6 +182,11 @@ impl From<RelayError> for ApiError {
                 "payload_too_large",
                 "payload exceeds the channel limit",
             ),
+            RelayError::StorageFull => Self::new(
+                StatusCode::INSUFFICIENT_STORAGE,
+                "storage_full",
+                "channel or relay storage is full",
+            ),
             RelayError::Expired(message) => {
                 let code = if message.contains("enroll") {
                     "enroll_code_expired"
@@ -172,11 +203,19 @@ impl From<RelayError> for ApiError {
 
 impl IntoResponse for ApiError {
     fn into_response(self) -> Response {
-        (
+        let mut response = (
             self.status,
             Json(json!({"error": self.code, "message": self.message})),
         )
-            .into_response()
+            .into_response();
+        if let Some(retry_after) = self.retry_after {
+            if let Ok(value) = axum::http::HeaderValue::from_str(&retry_after.to_string()) {
+                response
+                    .headers_mut()
+                    .insert(axum::http::header::RETRY_AFTER, value);
+            }
+        }
+        response
     }
 }
 
@@ -211,6 +250,9 @@ fn authenticate_device(state: &AppState, headers: &HeaderMap) -> Result<store::D
 
 fn authenticate(state: &AppState, headers: &HeaderMap, channel_id: &str) -> Result<Auth, ApiError> {
     let device = authenticate_device(state, headers)?;
+    if let Err(retry_after) = state.rate.check(&device.device_id, channel_id) {
+        return Err(ApiError::too_many(retry_after));
+    }
     let channel = state
         .db
         .with_conn(|conn| store::get_channel(conn, channel_id))
@@ -518,10 +560,7 @@ pub async fn serve(config: Config) -> crate::Result<()> {
     let db = Db::open(&config.data)?;
     let listen = config.listen.clone();
     let data = config.data.clone();
-    let state = AppState {
-        config: Arc::new(config),
-        db,
-    };
+    let state = AppState::new(config, db);
     let app = router(state);
     let listener = TcpListener::bind(&listen)
         .await
@@ -578,10 +617,7 @@ mod tests {
             ..Config::default()
         };
         let db = Db::open(&config.data).unwrap();
-        let app = router(AppState {
-            config: Arc::new(config),
-            db,
-        });
+        let app = router(AppState::new(config, db));
         let response = app
             .oneshot(
                 Request::builder()

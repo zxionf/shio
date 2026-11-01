@@ -300,22 +300,22 @@
           "desc": "A1 enroll code 一次性/过期；/v1/enroll、membership join、CLI channel/device/member/token/revoke；测试通过。",
           "id": "A1",
           "requires_human": false,
-          "status": "unverified",
-          "verified_at": null,
-          "verified_by": null
+          "status": "pass",
+          "verified_at": "2026-11-01T12:25:21Z",
+          "verified_by": "agent"
         }
       ],
       "archived_at": null,
       "archived_git_head": null,
       "created_at": "2026-11-01T12:08:47Z",
-      "current_step": "S4",
+      "current_step": null,
       "depends": [
         {
           "type": "task",
           "uid": "tsk_01M6BG68CJTJPDZ8RK4HF2K7T7"
         }
       ],
-      "finished_at": null,
+      "finished_at": "2026-11-01T12:25:21Z",
       "goal": "实现入网/成员/CLI 运维命令",
       "id": "T4",
       "line": "server",
@@ -329,7 +329,7 @@
       "plan": "relay",
       "review_policy": "mixed",
       "skipped_count": 0,
-      "status": "in_progress",
+      "status": "done",
       "steps": [
         {
           "desc": "",
@@ -372,7 +372,7 @@
           "locked": false,
           "requires_review": false,
           "skipped_reason": null,
-          "status": "in_progress",
+          "status": "done",
           "title": "补入网/CLI 测试并提交"
         }
       ],
@@ -393,7 +393,7 @@
       "archived_at": null,
       "archived_git_head": null,
       "created_at": "2026-11-01T12:08:47Z",
-      "current_step": null,
+      "current_step": "S4",
       "depends": [
         {
           "type": "task",
@@ -414,8 +414,53 @@
       "plan": "relay",
       "review_policy": "mixed",
       "skipped_count": 0,
-      "status": "todo",
-      "steps": [],
+      "status": "in_progress",
+      "steps": [
+        {
+          "desc": "",
+          "id": "S1",
+          "jump_meta": null,
+          "lock_reason": null,
+          "locked": false,
+          "requires_review": false,
+          "skipped_reason": null,
+          "status": "done",
+          "title": "实现 GC/quota/TTL/retained_from 数据层"
+        },
+        {
+          "desc": "",
+          "id": "S2",
+          "jump_meta": null,
+          "lock_reason": null,
+          "locked": false,
+          "requires_review": false,
+          "skipped_reason": null,
+          "status": "done",
+          "title": "实现幂等键/入网码清理与 rate limiter"
+        },
+        {
+          "desc": "",
+          "id": "S3",
+          "jump_meta": null,
+          "lock_reason": null,
+          "locked": false,
+          "requires_review": false,
+          "skipped_reason": null,
+          "status": "done",
+          "title": "接入 API 507/429 与 CLI gc"
+        },
+        {
+          "desc": "",
+          "id": "S4",
+          "jump_meta": null,
+          "lock_reason": null,
+          "locked": false,
+          "requires_review": false,
+          "skipped_reason": null,
+          "status": "in_progress",
+          "title": "补 GC/限流测试并提交"
+        }
+      ],
       "title": "实现 GC/quota/TTL/retained_from、清理与限流",
       "uid": "tsk_01M6BG68D604NSEEHBV01V061V"
     },

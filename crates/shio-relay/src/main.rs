@@ -7,6 +7,8 @@ use shio_relay::db::Db;
 use shio_relay::error::RelayError;
 use shio_relay::{server, store, util, Config};
 
+const IDEMPOTENCY_TTL_SECS: i64 = 24 * 60 * 60;
+
 #[derive(Debug, Parser)]
 #[command(name = "relay", version, about = "shio content-agnostic relay")]
 struct Cli {
@@ -21,6 +23,15 @@ struct Cli {
 enum Command {
     /// 启动中继服务器。
     Serve,
+    /// GC 运维。
+    Gc {
+        /// 只报告不删除。
+        #[arg(long, conflicts_with = "now")]
+        dry_run: bool,
+        /// 立即执行 GC。
+        #[arg(long)]
+        now: bool,
+    },
     /// channel 运维。
     Channel {
         #[command(subcommand)]
@@ -125,6 +136,11 @@ async fn run() -> shio_relay::Result<()> {
             let config = Config::load(&cli.config)?;
             server::serve(config).await
         }
+        Command::Gc { dry_run, now } => {
+            let config = Config::load(&cli.config)?;
+            let db = Db::open(&config.data)?;
+            gc(&config, &db, dry_run, now)
+        }
         Command::Channel { command } => {
             let config = Config::load(&cli.config)?;
             let db = Db::open(&config.data)?;
@@ -205,6 +221,30 @@ fn channel_list(db: &Db) -> shio_relay::Result<()> {
             channel.bytes,
             channel.quota_bytes
         );
+    }
+    Ok(())
+}
+
+fn gc(config: &Config, db: &Db, dry_run: bool, now_flag: bool) -> shio_relay::Result<()> {
+    if !dry_run && !now_flag {
+        return Err(RelayError::InvalidArgument("use --dry-run or --now"));
+    }
+    let ttl = i64::try_from(config.frame_ttl_secs)
+        .map_err(|_| RelayError::InvalidArgument("ttl out of range"))?;
+    let now = util::now_secs();
+    let reports = db.with_conn_mut(|conn| store::gc_all(conn, ttl, now, dry_run))?;
+    for report in reports {
+        println!(
+            "channel={} deleted={} retained_from={}",
+            report.channel_id, report.deleted, report.retained_from
+        );
+    }
+    if !dry_run {
+        let idem = db.with_conn(|conn| {
+            store::expire_idempotency_keys(conn, now.saturating_sub(IDEMPOTENCY_TTL_SECS))
+        })?;
+        let codes = db.with_conn(|conn| store::delete_expired_enroll_codes(conn, now))?;
+        println!("idem_cleared={idem} enroll_codes_deleted={codes}");
     }
     Ok(())
 }
