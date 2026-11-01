@@ -52,7 +52,7 @@
       "archived_at": null,
       "archived_git_head": null,
       "created_at": "2026-11-01T13:41:56Z",
-      "current_step": null,
+      "current_step": "S3",
       "depends": [],
       "finished_at": null,
       "goal": "新建 shio-relay-client 与 HttpRelayTransport",
@@ -69,8 +69,42 @@
       "plan": "hardening",
       "review_policy": "mixed",
       "skipped_count": 0,
-      "status": "todo",
-      "steps": [],
+      "status": "in_progress",
+      "steps": [
+        {
+          "desc": "",
+          "id": "S1",
+          "jump_meta": null,
+          "lock_reason": null,
+          "locked": false,
+          "requires_review": false,
+          "skipped_reason": null,
+          "status": "done",
+          "title": "引入 RelayError/RelayResult 并改 trait"
+        },
+        {
+          "desc": "",
+          "id": "S2",
+          "jump_meta": null,
+          "lock_reason": null,
+          "locked": false,
+          "requires_review": false,
+          "skipped_reason": null,
+          "status": "done",
+          "title": "新建 shio-relay-client 与 HttpRelayTransport"
+        },
+        {
+          "desc": "",
+          "id": "S3",
+          "jump_meta": null,
+          "lock_reason": null,
+          "locked": false,
+          "requires_review": false,
+          "skipped_reason": null,
+          "status": "in_progress",
+          "title": "补 HTTP transport 单测并提交"
+        }
+      ],
       "title": "新建 shio-relay-client 与 HttpRelayTransport",
       "uid": "tsk_01M6BNGV2F4RMJNYKDRPTW530Y"
     },

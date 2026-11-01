@@ -4,33 +4,33 @@
       "desc": "A1 per-token 并发上限 4；超限返回 429/Retry-After；单元/HTTP 测试通过。",
       "id": "A1",
       "requires_human": false,
-      "status": "unverified",
-      "verified_at": null,
-      "verified_by": null
+      "status": "pass",
+      "verified_at": "2026-11-01T13:49:21Z",
+      "verified_by": "agent"
     },
     {
       "desc": "A2 /v1/enroll 按 code 与 X-Forwarded-For/IP 限流；超限 429。",
       "id": "A2",
       "requires_human": false,
-      "status": "unverified",
-      "verified_at": null,
-      "verified_by": null
+      "status": "pass",
+      "verified_at": "2026-11-01T13:49:21Z",
+      "verified_by": "agent"
     },
     {
       "desc": "A3 relay stats --channel 输出 channel/seq/retained/bytes/quota 与成员 ack。",
       "id": "A3",
       "requires_human": false,
-      "status": "unverified",
-      "verified_at": null,
-      "verified_by": null
+      "status": "pass",
+      "verified_at": "2026-11-01T13:49:21Z",
+      "verified_by": "agent"
     },
     {
       "desc": "A4 cargo test -p shio-relay、clippy/fmt、sele check 通过。",
       "id": "A4",
       "requires_human": false,
-      "status": "unverified",
-      "verified_at": null,
-      "verified_by": null
+      "status": "pass",
+      "verified_at": "2026-11-01T13:49:21Z",
+      "verified_by": "agent"
     }
   ],
   "created_at": "2026-11-01T13:41:33Z",
@@ -42,7 +42,7 @@
     "docs"
   ],
   "plan": "hardening",
-  "status": "active",
+  "status": "done",
   "tasks": [
     {
       "acceptance": [
@@ -193,22 +193,22 @@
           "desc": "A1 输出 channel/seq/retained/bytes/quota 与成员 ack；CLI 测试通过。",
           "id": "A1",
           "requires_human": false,
-          "status": "unverified",
-          "verified_at": null,
-          "verified_by": null
+          "status": "pass",
+          "verified_at": "2026-11-01T13:47:00Z",
+          "verified_by": "agent"
         }
       ],
       "archived_at": null,
       "archived_git_head": null,
       "created_at": "2026-11-01T13:41:50Z",
-      "current_step": "S3",
+      "current_step": null,
       "depends": [
         {
           "type": "task",
           "uid": "tsk_01M6BNGMM2CWC48663NG4HT1JY"
         }
       ],
-      "finished_at": null,
+      "finished_at": "2026-11-01T13:47:00Z",
       "goal": "实现 relay stats --channel",
       "id": "T3",
       "line": "server",
@@ -222,7 +222,7 @@
       "plan": "hardening",
       "review_policy": "mixed",
       "skipped_count": 0,
-      "status": "in_progress",
+      "status": "done",
       "steps": [
         {
           "desc": "",
@@ -254,7 +254,7 @@
           "locked": false,
           "requires_review": false,
           "skipped_reason": null,
-          "status": "in_progress",
+          "status": "done",
           "title": "跑测试并提交"
         }
       ],
@@ -267,9 +267,9 @@
           "desc": "A1 并发/入网限流/stats 测试与文档齐全；cargo test -p shio-relay、clippy/fmt、sele check 通过。",
           "id": "A1",
           "requires_human": false,
-          "status": "unverified",
-          "verified_at": null,
-          "verified_by": null
+          "status": "pass",
+          "verified_at": "2026-11-01T13:47:11Z",
+          "verified_by": "agent"
         }
       ],
       "archived_at": null,
@@ -290,7 +290,7 @@
           "uid": "tsk_01M6BNGMMA0BYB4T6WMJHPMYRA"
         }
       ],
-      "finished_at": null,
+      "finished_at": "2026-11-01T13:47:11Z",
       "goal": "补 server hardening 测试与文档",
       "id": "T4",
       "line": "server",
@@ -305,8 +305,42 @@
       "plan": "hardening",
       "review_policy": "mixed",
       "skipped_count": 0,
-      "status": "todo",
-      "steps": [],
+      "status": "done",
+      "steps": [
+        {
+          "desc": "",
+          "id": "S1",
+          "jump_meta": null,
+          "lock_reason": null,
+          "locked": false,
+          "requires_review": false,
+          "skipped_reason": null,
+          "status": "done",
+          "title": "跑 server hardening 测试与 clippy/fmt"
+        },
+        {
+          "desc": "",
+          "id": "S2",
+          "jump_meta": null,
+          "lock_reason": null,
+          "locked": false,
+          "requires_review": false,
+          "skipped_reason": null,
+          "status": "done",
+          "title": "核对部署/README 文档"
+        },
+        {
+          "desc": "",
+          "id": "S3",
+          "jump_meta": null,
+          "lock_reason": null,
+          "locked": false,
+          "requires_review": false,
+          "skipped_reason": null,
+          "status": "done",
+          "title": "sele check 并收口"
+        }
+      ],
       "title": "补 server hardening 测试与文档",
       "uid": "tsk_01M6BNGMMJNCKZX9WMJBTACZJ8"
     }

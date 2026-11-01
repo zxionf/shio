@@ -16,10 +16,10 @@ use shio_core::crypto::kdf::KdfParams;
 use shio_core::model::RecordId;
 use shio_core::store::{Engine, EngineOptions};
 use shio_sync::relay::{
-    RelayClient, RelayFrame, RelayInfo, RelayPage, RelayTransport, SHIO_CHANGES, SHIO_OFFERS,
-    SHIO_PROGRESS, SHIO_SNAPSHOT,
+    RelayClient, RelayFrame, RelayInfo, RelayPage, RelayResult, RelayTransport, SHIO_CHANGES,
+    SHIO_OFFERS, SHIO_PROGRESS, SHIO_SNAPSHOT,
 };
-use shio_sync::{decode_pairing_secret, DeviceId, Result, Sync};
+use shio_sync::{decode_pairing_secret, DeviceId, Sync};
 
 const PASSWORD: &[u8] = b"correct horse battery staple";
 
@@ -83,7 +83,7 @@ impl RelayTransport for MemRelay {
         content_type: &str,
         payload: &[u8],
         idempotency_key: &str,
-    ) -> Result<i64> {
+    ) -> RelayResult<i64> {
         let mut state = self.state.lock().unwrap();
         let key = (self.sender, idempotency_key.to_owned());
         if let Some(seq) = state.idem.get(&key) {
@@ -101,7 +101,7 @@ impl RelayTransport for MemRelay {
         Ok(seq)
     }
 
-    fn pull(&mut self, _channel_id: &str, cursor: i64, limit: usize) -> Result<RelayPage> {
+    fn pull(&mut self, _channel_id: &str, cursor: i64, limit: usize) -> RelayResult<RelayPage> {
         let state = self.state.lock().unwrap();
         let mut frames = Vec::new();
         let mut has_more = false;
@@ -123,14 +123,14 @@ impl RelayTransport for MemRelay {
         })
     }
 
-    fn ack(&mut self, _channel_id: &str, cursor: i64) -> Result<i64> {
+    fn ack(&mut self, _channel_id: &str, cursor: i64) -> RelayResult<i64> {
         let mut state = self.state.lock().unwrap();
         let entry = state.acks.entry(self.sender).or_insert(0);
         *entry = (*entry).max(cursor);
         Ok(*entry)
     }
 
-    fn info(&mut self, channel_id: &str) -> Result<RelayInfo> {
+    fn info(&mut self, channel_id: &str) -> RelayResult<RelayInfo> {
         let state = self.state.lock().unwrap();
         let acked_cursor = *state.acks.get(&self.sender).unwrap_or(&0);
         let pending: Vec<&RelayFrame> = state

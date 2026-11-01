@@ -4,8 +4,36 @@
 //! `db_id` ↔ `channel_id` 映射、`content_type` 分派、幂等键与 gap 标记。
 
 use sha2::{Digest, Sha256};
+use thiserror::Error;
 
-use crate::{DeviceId, Result, Sync};
+use crate::{DeviceId, Sync};
+
+/// relay 客户端错误。
+#[derive(Debug, Error)]
+pub enum RelayError {
+    /// 内核错误。
+    #[error(transparent)]
+    Core(#[from] crate::Error),
+    /// relay 返回的 HTTP 错误。
+    #[error("relay http {status} {code}: {message}")]
+    Http {
+        /// HTTP 状态码。
+        status: u16,
+        /// 错误码。
+        code: String,
+        /// 错误说明。
+        message: String,
+    },
+    /// 网络错误。
+    #[error("relay network: {0}")]
+    Network(String),
+    /// 响应格式错误。
+    #[error("relay invalid response: {0}")]
+    Invalid(String),
+}
+
+/// relay 客户端结果。
+pub type RelayResult<T> = std::result::Result<T, RelayError>;
 
 /// 变更帧的 content type hint。
 pub const SHIO_CHANGES: &str = "application/vnd.shio.shy2.changes";
@@ -15,6 +43,11 @@ pub const SHIO_OFFERS: &str = "application/vnd.shio.shy2.offers";
 pub const SHIO_SNAPSHOT: &str = "application/vnd.shio.shy2.snapshot";
 /// 进度帧的 content type hint。
 pub const SHIO_PROGRESS: &str = "application/vnd.shio.shy2.progress";
+
+/// 由 16 字节 `db_id` 得到 relay `channel_id`（小写 hex）。
+pub fn channel_id(db_id: &[u8; 16]) -> String {
+    hex(db_id)
+}
 
 /// relay 返回的一帧。
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -76,13 +109,13 @@ pub trait RelayTransport {
         content_type: &str,
         payload: &[u8],
         idempotency_key: &str,
-    ) -> Result<i64>;
+    ) -> RelayResult<i64>;
     /// 拉取 `seq > cursor` 的帧；默认由实现排除自己。
-    fn pull(&mut self, channel_id: &str, cursor: i64, limit: usize) -> Result<RelayPage>;
+    fn pull(&mut self, channel_id: &str, cursor: i64, limit: usize) -> RelayResult<RelayPage>;
     /// 推进 ack；返回落盘后的 cursor。
-    fn ack(&mut self, channel_id: &str, cursor: i64) -> Result<i64>;
+    fn ack(&mut self, channel_id: &str, cursor: i64) -> RelayResult<i64>;
     /// 读取 channel 摘要。
-    fn info(&mut self, channel_id: &str) -> Result<RelayInfo>;
+    fn info(&mut self, channel_id: &str) -> RelayResult<RelayInfo>;
 }
 
 /// 一次 pull + apply 的结果。
@@ -134,13 +167,13 @@ impl<'a, T: RelayTransport> RelayClient<'a, T> {
     }
 
     /// `channel_id = hex(db_id)`。
-    pub fn channel_id(&self) -> Result<String> {
+    pub fn channel_id(&self) -> RelayResult<String> {
         let info = self.sync.info()?;
-        Ok(hex(&info.db_id))
+        Ok(channel_id(&info.db_id))
     }
 
     /// 推送一页变更；空页返回 `None`。
-    pub fn push_changes(&mut self, after: u64, limit: usize) -> Result<Option<i64>> {
+    pub fn push_changes(&mut self, after: u64, limit: usize) -> RelayResult<Option<i64>> {
         let page = self.sync.changes_since(after, limit)?;
         if page.entries.is_empty() {
             return Ok(None);
@@ -150,7 +183,7 @@ impl<'a, T: RelayTransport> RelayClient<'a, T> {
     }
 
     /// 推送 offer 页；没有 offer 返回 `None`。
-    pub fn push_offers(&mut self) -> Result<Option<i64>> {
+    pub fn push_offers(&mut self) -> RelayResult<Option<i64>> {
         let page = self.sync.offers()?;
         if page.offers.is_empty() {
             return Ok(None);
@@ -160,13 +193,13 @@ impl<'a, T: RelayTransport> RelayClient<'a, T> {
     }
 
     /// 推送进度帧。
-    pub fn push_progress(&mut self, peer: DeviceId) -> Result<i64> {
+    pub fn push_progress(&mut self, peer: DeviceId) -> RelayResult<i64> {
         let frame = self.sync.progress_frame(peer)?;
         self.push_frame(SHIO_PROGRESS, &frame)
     }
 
     /// 推送本机快照的所有页；返回各页的 relay seq。
-    pub fn push_snapshot(&mut self, limit: usize) -> Result<Vec<i64>> {
+    pub fn push_snapshot(&mut self, limit: usize) -> RelayResult<Vec<i64>> {
         let mut snapshot = self.sync.snapshot()?;
         let mut seqs = Vec::new();
         while let Some(page) = snapshot.next_page(limit)? {
@@ -180,7 +213,7 @@ impl<'a, T: RelayTransport> RelayClient<'a, T> {
     ///
     /// `gap = true` 表示 cursor 之前已丢帧；本页仍会被应用（可能包含快照）。
     /// 调用方应随后用 [`Self::pull_from_retained`] 或让对方发布快照。
-    pub fn pull_apply(&mut self, cursor: i64, limit: usize) -> Result<PullReport> {
+    pub fn pull_apply(&mut self, cursor: i64, limit: usize) -> RelayResult<PullReport> {
         let channel_id = self.channel_id()?;
         let page = self.transport.pull(&channel_id, cursor, limit)?;
         let mut report = PullReport {
@@ -224,7 +257,7 @@ impl<'a, T: RelayTransport> RelayClient<'a, T> {
     }
 
     /// 从 `retained_from` 开始重拉；gap 后用它走快照重同步。
-    pub fn pull_from_retained(&mut self, limit: usize) -> Result<PullReport> {
+    pub fn pull_from_retained(&mut self, limit: usize) -> RelayResult<PullReport> {
         let channel_id = self.channel_id()?;
         let info = self.transport.info(&channel_id)?;
         let cursor = info.retained_from.saturating_sub(1);
@@ -232,18 +265,18 @@ impl<'a, T: RelayTransport> RelayClient<'a, T> {
     }
 
     /// 推进 relay ack。
-    pub fn ack(&mut self, cursor: i64) -> Result<i64> {
+    pub fn ack(&mut self, cursor: i64) -> RelayResult<i64> {
         let channel_id = self.channel_id()?;
         self.transport.ack(&channel_id, cursor)
     }
 
     /// 读取 relay info。
-    pub fn info(&mut self) -> Result<RelayInfo> {
+    pub fn info(&mut self) -> RelayResult<RelayInfo> {
         let channel_id = self.channel_id()?;
         self.transport.info(&channel_id)
     }
 
-    fn push_frame(&mut self, content_type: &str, frame: &[u8]) -> Result<i64> {
+    fn push_frame(&mut self, content_type: &str, frame: &[u8]) -> RelayResult<i64> {
         let channel_id = self.channel_id()?;
         let idem_key = idempotency_key(frame);
         self.transport
