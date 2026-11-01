@@ -114,15 +114,15 @@
           "desc": "A1 两设备 + 真实 HTTP relay 的 changes/offers/snapshot/progress/gap 回归通过。",
           "id": "A1",
           "requires_human": false,
-          "status": "unverified",
-          "verified_at": null,
-          "verified_by": null
+          "status": "pass",
+          "verified_at": "2026-11-01T13:57:02Z",
+          "verified_by": "agent"
         }
       ],
       "archived_at": null,
       "archived_git_head": null,
       "created_at": "2026-11-01T13:41:56Z",
-      "current_step": "S2",
+      "current_step": null,
       "depends": [
         {
           "type": "task",
@@ -133,7 +133,7 @@
           "uid": "tsk_01M6BNGMMJNCKZX9WMJBTACZJ8"
         }
       ],
-      "finished_at": null,
+      "finished_at": "2026-11-01T13:57:02Z",
       "goal": "补两设备 HTTP e2e",
       "id": "T2",
       "line": "client",
@@ -150,7 +150,7 @@
       "plan": "hardening",
       "review_policy": "mixed",
       "skipped_count": 0,
-      "status": "in_progress",
+      "status": "done",
       "steps": [
         {
           "desc": "",
@@ -171,7 +171,7 @@
           "locked": false,
           "requires_review": false,
           "skipped_reason": null,
-          "status": "in_progress",
+          "status": "done",
           "title": "跑 workspace 测试并提交"
         }
       ],
@@ -192,7 +192,7 @@
       "archived_at": null,
       "archived_git_head": null,
       "created_at": "2026-11-01T13:41:56Z",
-      "current_step": null,
+      "current_step": "S3",
       "depends": [
         {
           "type": "task",
@@ -214,8 +214,42 @@
       "plan": "hardening",
       "review_policy": "mixed",
       "skipped_count": 0,
-      "status": "todo",
-      "steps": [],
+      "status": "in_progress",
+      "steps": [
+        {
+          "desc": "",
+          "id": "S1",
+          "jump_meta": null,
+          "lock_reason": null,
+          "locked": false,
+          "requires_review": false,
+          "skipped_reason": null,
+          "status": "done",
+          "title": "写 shio-relay-client 使用说明"
+        },
+        {
+          "desc": "",
+          "id": "S2",
+          "jump_meta": null,
+          "lock_reason": null,
+          "locked": false,
+          "requires_review": false,
+          "skipped_reason": null,
+          "status": "done",
+          "title": "跑 workspace 测试与 sele check"
+        },
+        {
+          "desc": "",
+          "id": "S3",
+          "jump_meta": null,
+          "lock_reason": null,
+          "locked": false,
+          "requires_review": false,
+          "skipped_reason": null,
+          "status": "in_progress",
+          "title": "提交并收口 client 线"
+        }
+      ],
       "title": "补客户端文档与 workspace 验证",
       "uid": "tsk_01M6BNGV2Z3YWBWZVQX0MP5429"
     }
