@@ -87,6 +87,14 @@ impl Config {
                 "channel_quota_bytes must be greater than zero".to_owned(),
             ));
         }
+        if self.frame_ttl_secs > i64::MAX as u64
+            || self.channel_quota_bytes > i64::MAX as u64
+            || self.max_payload_bytes > i64::MAX as u64
+        {
+            return Err(RelayError::Config(
+                "time and byte limits must fit in i64".to_owned(),
+            ));
+        }
         if self.max_payload_bytes == 0 {
             return Err(RelayError::Config(
                 "max_payload_bytes must be greater than zero".to_owned(),

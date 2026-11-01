@@ -572,6 +572,23 @@ pub fn fetch_frames(
     })
 }
 
+/// 统计某设备待拉取的帧数与字节数。
+pub fn pending_stats(
+    conn: &Connection,
+    channel_id: &str,
+    device_id: &str,
+    acked_cursor: i64,
+) -> Result<(i64, i64)> {
+    let stats = conn.query_row(
+        "SELECT COUNT(*), COALESCE(SUM(LENGTH(payload)), 0)
+         FROM frames
+         WHERE channel_id = ?1 AND seq > ?2 AND sender != ?3",
+        params![channel_id, acked_cursor, device_id],
+        |row| Ok((row.get(0)?, row.get(1)?)),
+    )?;
+    Ok(stats)
+}
+
 fn find_idem(
     conn: &Connection,
     channel_id: &str,
