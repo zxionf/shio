@@ -1,0 +1,292 @@
+{
+  "acceptance": [
+    {
+      "desc": "A1 文档：.design/同步.md 与 docs/relay.md 的纯中继、channel 划分、校验归属一致。",
+      "id": "A1",
+      "requires_human": false,
+      "status": "pass",
+      "verified_at": "2026-11-01T11:48:27Z",
+      "verified_by": "agent"
+    },
+    {
+      "desc": "A2 内核：shio-core 提供唯一帧头校验入口，shio-sync 的 changes/offers/snapshot/progress 路径复用。",
+      "id": "A2",
+      "requires_human": false,
+      "status": "pass",
+      "verified_at": "2026-11-01T11:48:27Z",
+      "verified_by": "agent"
+    },
+    {
+      "desc": "A3 测试：sender 不匹配、progress 伪造、db_id 不匹配、超限帧均有回归测试；workspace 测试与 sele check 通过。",
+      "id": "A3",
+      "requires_human": false,
+      "status": "pass",
+      "verified_at": "2026-11-01T11:48:27Z",
+      "verified_by": "agent"
+    }
+  ],
+  "created_at": "2026-11-01T11:40:24Z",
+  "depends": [],
+  "goal": "把 relay 文档与同步设计对齐，并把 SHY2 帧头校验收敛到 shio-core，让所有 decode/apply 路径统一校验 expected_db_id 与 expected_sender。",
+  "id": "sync",
+  "modules": [
+    "docs",
+    "shio-core",
+    "shio-sync"
+  ],
+  "plan": "map",
+  "status": "done",
+  "tasks": [
+    {
+      "acceptance": [
+        {
+          "desc": "A1 .design/同步.md 的拓扑选择与校验分工与 docs/relay.md v0.2 一致；sele check 通过。",
+          "id": "A1",
+          "requires_human": false,
+          "status": "pass",
+          "verified_at": "2026-11-01T11:42:44Z",
+          "verified_by": "agent"
+        }
+      ],
+      "archived_at": null,
+      "archived_git_head": null,
+      "created_at": "2026-11-01T11:40:31Z",
+      "current_step": null,
+      "depends": [],
+      "finished_at": "2026-11-01T11:42:44Z",
+      "goal": "对齐 relay 文档与同步设计结论",
+      "id": "T1",
+      "line": "sync",
+      "locked": {
+        "locked": false
+      },
+      "modules": [
+        "docs"
+      ],
+      "pause_context": null,
+      "plan": "map",
+      "review_policy": "mixed",
+      "skipped_count": 0,
+      "status": "done",
+      "steps": [
+        {
+          "desc": "",
+          "id": "S1",
+          "jump_meta": null,
+          "lock_reason": null,
+          "locked": false,
+          "requires_review": false,
+          "skipped_reason": null,
+          "status": "done",
+          "title": "阅读 .design/同步.md §9/§10 与 docs/relay.md v0.2，列出冲突点"
+        },
+        {
+          "desc": "",
+          "id": "S2",
+          "jump_meta": null,
+          "lock_reason": null,
+          "locked": false,
+          "requires_review": false,
+          "skipped_reason": null,
+          "status": "done",
+          "title": "修改 .design/同步.md 的拓扑选择与校验分工"
+        },
+        {
+          "desc": "",
+          "id": "S3",
+          "jump_meta": null,
+          "lock_reason": null,
+          "locked": false,
+          "requires_review": false,
+          "skipped_reason": null,
+          "status": "done",
+          "title": "核对术语/链接并跑 sele check"
+        }
+      ],
+      "title": "对齐 relay 文档与同步设计结论",
+      "uid": "tsk_01M6BEJGSGTE5XBWFHE23H57MN"
+    },
+    {
+      "acceptance": [
+        {
+          "desc": "A1 shio-core 暴露 validate_frame(frame, expected_db_id, expected_sender)，覆盖 magic/format/kind/flags/db_id/sender/长度/条目边界；cargo test -p shio-core 通过。",
+          "id": "A1",
+          "requires_human": false,
+          "status": "pass",
+          "verified_at": "2026-11-01T11:45:36Z",
+          "verified_by": "agent"
+        }
+      ],
+      "archived_at": null,
+      "archived_git_head": null,
+      "created_at": "2026-11-01T11:40:31Z",
+      "current_step": null,
+      "depends": [
+        {
+          "type": "task",
+          "uid": "tsk_01M6BEJGSGTE5XBWFHE23H57MN"
+        }
+      ],
+      "finished_at": "2026-11-01T11:45:36Z",
+      "goal": "把 SHY2 帧头解析与校验下沉 shio-core",
+      "id": "T2",
+      "line": "sync",
+      "locked": {
+        "locked": false
+      },
+      "modules": [
+        "shio-core"
+      ],
+      "pause_context": null,
+      "plan": "map",
+      "review_policy": "mixed",
+      "skipped_count": 0,
+      "status": "done",
+      "steps": [
+        {
+          "desc": "",
+          "id": "S1",
+          "jump_meta": null,
+          "lock_reason": null,
+          "locked": false,
+          "requires_review": false,
+          "skipped_reason": null,
+          "status": "done",
+          "title": "设计 validate_frame API 与错误映射"
+        },
+        {
+          "desc": "",
+          "id": "S2",
+          "jump_meta": null,
+          "lock_reason": null,
+          "locked": false,
+          "requires_review": false,
+          "skipped_reason": null,
+          "status": "done",
+          "title": "把 77 字节头布局与校验移到 shio-core"
+        },
+        {
+          "desc": "",
+          "id": "S3",
+          "jump_meta": null,
+          "lock_reason": null,
+          "locked": false,
+          "requires_review": false,
+          "skipped_reason": null,
+          "status": "done",
+          "title": "补 magic/format/kind/db_id/sender/边界单元测试"
+        },
+        {
+          "desc": "",
+          "id": "S4",
+          "jump_meta": null,
+          "lock_reason": null,
+          "locked": false,
+          "requires_review": false,
+          "skipped_reason": null,
+          "status": "done",
+          "title": "跑 cargo test -p shio-core"
+        }
+      ],
+      "title": "把 SHY2 帧头解析与校验下沉 shio-core",
+      "uid": "tsk_01M6BEJGSRR9PYWJJYJ63A4WKS"
+    },
+    {
+      "acceptance": [
+        {
+          "desc": "A1 changes/offers/snapshot/progress 的 decode/apply 复用 core 校验并接受 expected_sender；A2 sender 不匹配与 progress 伪造有回归测试；cargo test --workspace 与 sele check 通过。",
+          "id": "A1",
+          "requires_human": false,
+          "status": "pass",
+          "verified_at": "2026-11-01T11:48:27Z",
+          "verified_by": "agent"
+        }
+      ],
+      "archived_at": null,
+      "archived_git_head": null,
+      "created_at": "2026-11-01T11:40:31Z",
+      "current_step": "S5",
+      "depends": [
+        {
+          "type": "task",
+          "uid": "tsk_01M6BEJGSRR9PYWJJYJ63A4WKS"
+        }
+      ],
+      "finished_at": "2026-11-01T11:48:27Z",
+      "goal": "shio-sync 接入统一校验并补 sender 回归",
+      "id": "T3",
+      "line": "sync",
+      "locked": {
+        "locked": false
+      },
+      "modules": [
+        "shio-sync",
+        "shio-core"
+      ],
+      "pause_context": null,
+      "plan": "map",
+      "review_policy": "mixed",
+      "skipped_count": 0,
+      "status": "in_progress",
+      "steps": [
+        {
+          "desc": "",
+          "id": "S1",
+          "jump_meta": null,
+          "lock_reason": null,
+          "locked": false,
+          "requires_review": false,
+          "skipped_reason": null,
+          "status": "done",
+          "title": "调整 shio-sync decode/apply 路径复用 core 校验"
+        },
+        {
+          "desc": "",
+          "id": "S2",
+          "jump_meta": null,
+          "lock_reason": null,
+          "locked": false,
+          "requires_review": false,
+          "skipped_reason": null,
+          "status": "done",
+          "title": "确认 shio/FFI 旧调用点不受影响（新增 API 不破坏 ABI）"
+        },
+        {
+          "desc": "",
+          "id": "S3",
+          "jump_meta": null,
+          "lock_reason": null,
+          "locked": false,
+          "requires_review": false,
+          "skipped_reason": null,
+          "status": "done",
+          "title": "补 sender 不匹配与 progress 伪造回归测试"
+        },
+        {
+          "desc": "",
+          "id": "S4",
+          "jump_meta": null,
+          "lock_reason": null,
+          "locked": false,
+          "requires_review": false,
+          "skipped_reason": null,
+          "status": "done",
+          "title": "跑 cargo test --workspace 与 sele check"
+        },
+        {
+          "desc": "",
+          "id": "S5",
+          "jump_meta": null,
+          "lock_reason": null,
+          "locked": false,
+          "requires_review": false,
+          "skipped_reason": null,
+          "status": "in_progress",
+          "title": "提交本次 map.sync 改动"
+        }
+      ],
+      "title": "shio-sync 接入统一校验并补 sender 回归",
+      "uid": "tsk_01M6BEJGT1QZG177PST5MS4DYT"
+    }
+  ]
+}

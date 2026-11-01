@@ -9,6 +9,8 @@ use std::time::Duration;
 use crate::error::{Error, Result};
 use crate::model::{DeviceId, KeyId, RecordId, Timestamp};
 
+pub mod frame;
+
 /// 单帧默认上限：4 MiB。
 pub const MAX_FRAME_BYTES: usize = 4 * 1024 * 1024;
 

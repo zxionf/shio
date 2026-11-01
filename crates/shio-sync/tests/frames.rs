@@ -11,7 +11,7 @@ use std::path::Path;
 use std::time::Duration;
 
 use shio_core::crypto::kdf::KdfParams;
-use shio_core::model::RecordId;
+use shio_core::model::{DeviceId, RecordId};
 use shio_core::store::{Engine, EngineOptions};
 use shio_sync::{decode_pairing_secret, frame, Error, Sync};
 
@@ -91,6 +91,77 @@ fn change_offer_and_snapshot_frames_roundtrip() {
             .value,
         "hello"
     );
+}
+
+#[test]
+fn checked_paths_require_matching_sender() {
+    let dir = tempfile::tempdir().unwrap();
+    let a = create(&dir.path().join("a.redb"));
+    let info_a = a.enable_sync(None).unwrap();
+    a.put("notes", "note", RecordId::new_v7(), &"hello", 1)
+        .unwrap();
+
+    let sync_a = Sync::new(&a);
+    let offer = sync_a.pairing_offer(Duration::from_secs(600)).unwrap();
+    let secret = decode_pairing_secret(&offer.secret).unwrap();
+    let b = Sync::accept_pairing(
+        options(&dir.path().join("b.redb")),
+        PASSWORD,
+        &offer,
+        &secret,
+    )
+    .unwrap();
+    let info_b = b.sync_info().unwrap();
+    let sync_b = Sync::new(&b);
+
+    let wrong = DeviceId::from_bytes([9u8; 16]);
+
+    // changes：错误 sender 在 decode/apply 前被拒绝。
+    let frame = sync_a
+        .encode(&sync_a.changes_since(0, 1000).unwrap())
+        .unwrap();
+    assert!(sync_b.validate_frame(&frame, info_a.device_id).is_ok());
+    assert!(sync_b.validate_frame(&frame, wrong).is_err());
+    assert!(sync_b.decode_checked(&frame, wrong).is_err());
+    assert!(sync_b.apply_checked(&frame, wrong).is_err());
+    sync_b.apply_checked(&frame, info_a.device_id).unwrap();
+
+    // offers：同样要求 sender 与 relay 上报一致。
+    a.rotate_data_key().unwrap();
+    let offers = sync_a.offers().unwrap();
+    let frame = sync_a.encode_offers(&offers).unwrap();
+    assert!(sync_b.decode_offers_checked(&frame, wrong).is_err());
+    let decoded = sync_b
+        .decode_offers_checked(&frame, info_a.device_id)
+        .unwrap();
+    assert_eq!(decoded, offers);
+    sync_b
+        .apply_offers_checked(&frame, info_a.device_id)
+        .unwrap();
+
+    // snapshot：新编码把本机 device_id 写进帧头，checked 路径能校验。
+    let mut iter = sync_a.snapshot().unwrap();
+    let page = iter.next_page(1).unwrap().unwrap();
+    let frame = sync_a.encode_snapshot(&page).unwrap();
+    assert!(sync_b.decode_snapshot_checked(&frame, wrong).is_err());
+    assert_eq!(
+        sync_b
+            .decode_snapshot_checked(&frame, info_a.device_id)
+            .unwrap(),
+        page
+    );
+    sync_b
+        .apply_snapshot_frame_checked(&frame, info_a.device_id)
+        .unwrap();
+
+    // progress：伪造 sender 不能推进对方的 heard/ 状态。
+    let progress = sync_b.progress_frame(info_a.device_id).unwrap();
+    assert!(frame::decode_progress_checked(info_a.db_id, wrong, &progress).is_err());
+    assert!(sync_a.apply_progress_checked(&progress, wrong).is_err());
+    let cursor = sync_a
+        .apply_progress_checked(&progress, info_b.device_id)
+        .unwrap();
+    assert!(cursor > 0);
 }
 
 #[test]

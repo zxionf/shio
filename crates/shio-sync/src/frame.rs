@@ -1,61 +1,25 @@
 //! `SHY2` 帧编码与解码。
 //!
-//! 帧头固定 77 字节，`frame_len` 不包含自身 4 字节。变更页与 offer 页共用
-//! 帧头；快照页的条目是 `u16 key_len | record_key | u32 blob_len | RecordBlob`。
+//! 帧头布局、编码与统一校验在 `shio_core::sync::frame`；本模块只负责
+//! 变更页 / offer 页 / 快照页 / 进度帧的条目编码与页语义。
 
 use shio_core::codec::{decode_record_key, encode_record_key};
 use shio_core::codec2;
 use shio_core::store::changes;
+use shio_core::sync::frame::{encode_frame, parse_frame};
 use shio_core::sync::{
     ChangeEntry, ChangePage, OfferPage, RecordChange, SnapshotPage, SnapshotRecord,
+    MAX_FRAME_ENTRIES,
 };
 use shio_core::{DeviceId, Error, Result};
 
-pub const MAGIC: &[u8; 4] = b"SHY2";
-pub const FORMAT: u8 = 2;
-pub const HEADER_LEN: usize = 77;
-pub const KIND_CHANGES: u8 = 0;
-pub const KIND_OFFERS: u8 = 1;
-pub const KIND_SNAPSHOT: u8 = 2;
-pub const KIND_PROGRESS: u8 = 3;
-
-const FRAME_LEN_OFFSET: usize = 0;
-const MAGIC_OFFSET: usize = 4;
-const FORMAT_OFFSET: usize = 8;
-const KIND_OFFSET: usize = 9;
-const FLAGS_OFFSET: usize = 10;
-const DB_OFFSET: usize = 11;
-const SENDER_OFFSET: usize = 27;
-const AFTER_OFFSET: usize = 43;
-const LOG_START_OFFSET: usize = 51;
-const LOG_END_OFFSET: usize = 59;
-const NEXT_OFFSET: usize = 67;
-const COUNT_OFFSET: usize = 75;
-
-#[derive(Debug, Clone, Copy)]
-pub struct Header {
-    pub kind: u8,
-    pub db_id: [u8; 16],
-    pub sender: DeviceId,
-    pub after: u64,
-    pub log_start: u64,
-    pub log_end: u64,
-    pub next: u64,
-    pub count: usize,
-}
-
-struct FrameMeta {
-    kind: u8,
-    db_id: [u8; 16],
-    sender: DeviceId,
-    after: u64,
-    log_start: u64,
-    log_end: u64,
-    next: u64,
-}
+pub use shio_core::sync::frame::{
+    validate_frame, FrameMeta, Header, FORMAT, HEADER_LEN, KIND_CHANGES, KIND_OFFERS,
+    KIND_PROGRESS, KIND_SNAPSHOT, MAGIC,
+};
 
 pub fn encode_change_page(db_id: [u8; 16], page: &ChangePage) -> Result<Vec<u8>> {
-    if page.entries.len() > shio_core::sync::MAX_FRAME_ENTRIES {
+    if page.entries.len() > MAX_FRAME_ENTRIES {
         return Err(Error::InvalidArgument("too many entries in one frame"));
     }
     let mut entries = Vec::with_capacity(page.entries.len());
@@ -81,6 +45,24 @@ pub fn encode_change_page(db_id: [u8; 16], page: &ChangePage) -> Result<Vec<u8>>
 
 pub fn decode_change_page(expected_db: [u8; 16], frame: &[u8]) -> Result<ChangePage> {
     let (header, raw_entries) = parse_frame(frame)?;
+    decode_change_page_parts(expected_db, header, raw_entries)
+}
+
+/// 解码变更页，并校验帧头 `db_id` 与 `sender`。
+pub fn decode_change_page_checked(
+    expected_db: [u8; 16],
+    expected_sender: DeviceId,
+    frame: &[u8],
+) -> Result<ChangePage> {
+    let (header, raw_entries) = validate_frame(frame, expected_db, expected_sender)?;
+    decode_change_page_parts(expected_db, header, raw_entries)
+}
+
+fn decode_change_page_parts(
+    expected_db: [u8; 16],
+    header: Header,
+    raw_entries: Vec<&[u8]>,
+) -> Result<ChangePage> {
     if header.kind != KIND_CHANGES {
         return Err(Error::InvalidArgument("frame is not a change page"));
     }
@@ -125,6 +107,24 @@ pub fn encode_progress(db_id: [u8; 16], device: DeviceId, cursor: u64) -> Result
 /// 解码进度帧，返回 `(报告方设备, 已消费游标)`。
 pub fn decode_progress(expected_db: [u8; 16], frame: &[u8]) -> Result<(DeviceId, u64)> {
     let (header, entries) = parse_frame(frame)?;
+    decode_progress_parts(expected_db, header, entries)
+}
+
+/// 解码进度帧，并校验帧头 `db_id` 与 `sender`。
+pub fn decode_progress_checked(
+    expected_db: [u8; 16],
+    expected_sender: DeviceId,
+    frame: &[u8],
+) -> Result<(DeviceId, u64)> {
+    let (header, entries) = validate_frame(frame, expected_db, expected_sender)?;
+    decode_progress_parts(expected_db, header, entries)
+}
+
+fn decode_progress_parts(
+    expected_db: [u8; 16],
+    header: Header,
+    entries: Vec<&[u8]>,
+) -> Result<(DeviceId, u64)> {
     if header.kind != KIND_PROGRESS {
         return Err(Error::InvalidArgument("frame is not a progress report"));
     }
@@ -138,7 +138,7 @@ pub fn decode_progress(expected_db: [u8; 16], frame: &[u8]) -> Result<(DeviceId,
 }
 
 pub fn encode_offers(db_id: [u8; 16], page: &OfferPage) -> Result<Vec<u8>> {
-    if page.offers.len() > shio_core::sync::MAX_FRAME_ENTRIES {
+    if page.offers.len() > MAX_FRAME_ENTRIES {
         return Err(Error::InvalidArgument("too many offers in one frame"));
     }
     let mut entries = Vec::with_capacity(page.offers.len());
@@ -161,6 +161,24 @@ pub fn encode_offers(db_id: [u8; 16], page: &OfferPage) -> Result<Vec<u8>> {
 
 pub fn decode_offers(expected_db: [u8; 16], frame: &[u8]) -> Result<OfferPage> {
     let (header, raw_entries) = parse_frame(frame)?;
+    decode_offers_parts(expected_db, header, raw_entries)
+}
+
+/// 解码 offer 页，并校验帧头 `db_id` 与 `sender`。
+pub fn decode_offers_checked(
+    expected_db: [u8; 16],
+    expected_sender: DeviceId,
+    frame: &[u8],
+) -> Result<OfferPage> {
+    let (header, raw_entries) = validate_frame(frame, expected_db, expected_sender)?;
+    decode_offers_parts(expected_db, header, raw_entries)
+}
+
+fn decode_offers_parts(
+    expected_db: [u8; 16],
+    header: Header,
+    raw_entries: Vec<&[u8]>,
+) -> Result<OfferPage> {
     if header.kind != KIND_OFFERS {
         return Err(Error::InvalidArgument("frame is not an offer page"));
     }
@@ -182,7 +200,16 @@ pub fn decode_offers(expected_db: [u8; 16], frame: &[u8]) -> Result<OfferPage> {
 }
 
 pub fn encode_snapshot(db_id: [u8; 16], page: &SnapshotPage) -> Result<Vec<u8>> {
-    if page.entries.len() > shio_core::sync::MAX_FRAME_ENTRIES {
+    encode_snapshot_with_sender(db_id, DeviceId::from_bytes([0u8; 16]), page)
+}
+
+/// 编码快照页，并把发送方写进帧头；relay 客户端应使用这个入口。
+pub fn encode_snapshot_with_sender(
+    db_id: [u8; 16],
+    sender: DeviceId,
+    page: &SnapshotPage,
+) -> Result<Vec<u8>> {
+    if page.entries.len() > MAX_FRAME_ENTRIES {
         return Err(Error::InvalidArgument(
             "too many snapshot records in one frame",
         ));
@@ -205,7 +232,7 @@ pub fn encode_snapshot(db_id: [u8; 16], page: &SnapshotPage) -> Result<Vec<u8>> 
         FrameMeta {
             kind: KIND_SNAPSHOT,
             db_id,
-            sender: DeviceId::from_bytes([0u8; 16]),
+            sender,
             after: 0,
             log_start: page.at_seq,
             log_end: page.at_seq,
@@ -217,6 +244,24 @@ pub fn encode_snapshot(db_id: [u8; 16], page: &SnapshotPage) -> Result<Vec<u8>> 
 
 pub fn decode_snapshot(expected_db: [u8; 16], frame: &[u8]) -> Result<SnapshotPage> {
     let (header, raw_entries) = parse_frame(frame)?;
+    decode_snapshot_parts(expected_db, header, raw_entries)
+}
+
+/// 解码快照页，并校验帧头 `db_id` 与 `sender`。
+pub fn decode_snapshot_checked(
+    expected_db: [u8; 16],
+    expected_sender: DeviceId,
+    frame: &[u8],
+) -> Result<SnapshotPage> {
+    let (header, raw_entries) = validate_frame(frame, expected_db, expected_sender)?;
+    decode_snapshot_parts(expected_db, header, raw_entries)
+}
+
+fn decode_snapshot_parts(
+    expected_db: [u8; 16],
+    header: Header,
+    raw_entries: Vec<&[u8]>,
+) -> Result<SnapshotPage> {
     if header.kind != KIND_SNAPSHOT {
         return Err(Error::InvalidArgument("frame is not a snapshot page"));
     }
@@ -270,158 +315,6 @@ pub fn decode_snapshot(expected_db: [u8; 16], frame: &[u8]) -> Result<SnapshotPa
         next_key,
         entries,
     })
-}
-
-fn encode_frame(meta: FrameMeta, entries: Vec<Vec<u8>>) -> Result<Vec<u8>> {
-    if entries.len() > shio_core::sync::MAX_FRAME_ENTRIES {
-        return Err(Error::InvalidArgument("too many entries in one frame"));
-    }
-    let count = u16::try_from(entries.len())
-        .map_err(|_| Error::InvalidArgument("too many entries in one frame"))?;
-    let mut body_len = HEADER_LEN - 4;
-    for entry in &entries {
-        let len = u32::try_from(entry.len())
-            .map_err(|_| Error::InvalidArgument("frame entry is too large"))?;
-        body_len = body_len
-            .checked_add(4 + len as usize)
-            .ok_or(Error::InvalidArgument("frame length overflow"))?;
-    }
-    let total = body_len
-        .checked_add(4)
-        .ok_or(Error::InvalidArgument("frame length overflow"))?;
-    if total > shio_core::sync::MAX_FRAME_BYTES {
-        return Err(Error::InvalidArgument("frame exceeds the size limit"));
-    }
-    let frame_len =
-        u32::try_from(body_len).map_err(|_| Error::InvalidArgument("frame length overflow"))?;
-
-    let mut frame = Vec::with_capacity(total);
-    frame.extend_from_slice(&frame_len.to_be_bytes());
-    frame.extend_from_slice(MAGIC);
-    frame.push(FORMAT);
-    frame.push(meta.kind);
-    frame.push(0);
-    frame.extend_from_slice(&meta.db_id);
-    frame.extend_from_slice(meta.sender.as_bytes());
-    frame.extend_from_slice(&meta.after.to_be_bytes());
-    frame.extend_from_slice(&meta.log_start.to_be_bytes());
-    frame.extend_from_slice(&meta.log_end.to_be_bytes());
-    frame.extend_from_slice(&meta.next.to_be_bytes());
-    frame.extend_from_slice(&count.to_be_bytes());
-    for entry in entries {
-        let len = u32::try_from(entry.len())
-            .map_err(|_| Error::InvalidArgument("frame entry is too large"))?;
-        frame.extend_from_slice(&len.to_be_bytes());
-        frame.extend_from_slice(&entry);
-    }
-    Ok(frame)
-}
-
-fn parse_frame(frame: &[u8]) -> Result<(Header, Vec<&[u8]>)> {
-    if frame.len() > shio_core::sync::MAX_FRAME_BYTES {
-        return Err(Error::InvalidArgument("frame exceeds the size limit"));
-    }
-    if frame.len() < HEADER_LEN {
-        return Err(Error::Corrupted("frame is shorter than the header"));
-    }
-    let frame_len = u32::from_be_bytes(
-        frame[FRAME_LEN_OFFSET..FRAME_LEN_OFFSET + 4]
-            .try_into()
-            .map_err(|_| Error::Corrupted("frame length is truncated"))?,
-    );
-    if usize::try_from(frame_len).map_err(|_| Error::Corrupted("frame length overflow"))?
-        != frame.len() - 4
-    {
-        return Err(Error::Corrupted("frame length does not match the buffer"));
-    }
-    if &frame[MAGIC_OFFSET..MAGIC_OFFSET + 4] != MAGIC {
-        return Err(Error::Corrupted("frame magic mismatch"));
-    }
-    let format = frame[FORMAT_OFFSET];
-    if format != FORMAT {
-        return Err(Error::UnsupportedFormat {
-            found: u16::from(format),
-            supported: u16::from(FORMAT),
-        });
-    }
-    let kind = frame[KIND_OFFSET];
-    if !matches!(
-        kind,
-        KIND_CHANGES | KIND_OFFERS | KIND_SNAPSHOT | KIND_PROGRESS
-    ) {
-        return Err(Error::InvalidArgument("unknown frame kind"));
-    }
-    if frame[FLAGS_OFFSET] != 0 {
-        return Err(Error::Corrupted("reserved frame flags are not zero"));
-    }
-    let db_id: [u8; 16] = frame[DB_OFFSET..DB_OFFSET + 16]
-        .try_into()
-        .map_err(|_| Error::Corrupted("frame db id is truncated"))?;
-    let sender: [u8; 16] = frame[SENDER_OFFSET..SENDER_OFFSET + 16]
-        .try_into()
-        .map_err(|_| Error::Corrupted("frame sender is truncated"))?;
-    let sender = DeviceId::from_bytes(sender);
-    let after = read_u64(frame, AFTER_OFFSET)?;
-    let log_start = read_u64(frame, LOG_START_OFFSET)?;
-    let log_end = read_u64(frame, LOG_END_OFFSET)?;
-    let next = read_u64(frame, NEXT_OFFSET)?;
-    let count = usize::from(u16::from_be_bytes(
-        frame[COUNT_OFFSET..COUNT_OFFSET + 2]
-            .try_into()
-            .map_err(|_| Error::Corrupted("frame count is truncated"))?,
-    ));
-    if count > shio_core::sync::MAX_FRAME_ENTRIES {
-        return Err(Error::InvalidArgument("frame contains too many entries"));
-    }
-
-    let mut entries = Vec::with_capacity(count);
-    let mut offset = HEADER_LEN;
-    for _ in 0..count {
-        if offset + 4 > frame.len() {
-            return Err(Error::Corrupted("frame entry length is truncated"));
-        }
-        let len = u32::from_be_bytes(
-            frame[offset..offset + 4]
-                .try_into()
-                .map_err(|_| Error::Corrupted("frame entry length is truncated"))?,
-        );
-        let len =
-            usize::try_from(len).map_err(|_| Error::Corrupted("frame entry length overflow"))?;
-        let start = offset + 4;
-        let end = start
-            .checked_add(len)
-            .ok_or(Error::Corrupted("frame entry length overflow"))?;
-        if end > frame.len() {
-            return Err(Error::Corrupted("frame entry is truncated"));
-        }
-        entries.push(&frame[start..end]);
-        offset = end;
-    }
-    if offset != frame.len() {
-        return Err(Error::Corrupted("frame has trailing bytes"));
-    }
-
-    Ok((
-        Header {
-            kind,
-            db_id,
-            sender,
-            after,
-            log_start,
-            log_end,
-            next,
-            count,
-        },
-        entries,
-    ))
-}
-
-fn read_u64(bytes: &[u8], offset: usize) -> Result<u64> {
-    Ok(u64::from_be_bytes(
-        bytes[offset..offset + 8]
-            .try_into()
-            .map_err(|_| Error::Corrupted("frame field is truncated"))?,
-    ))
 }
 
 /// 帧里的记录变更与记录 blob 的 header 是否一致；供应用前的额外校验使用。

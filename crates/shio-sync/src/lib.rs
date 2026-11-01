@@ -73,6 +73,31 @@ impl<'a> Sync<'a> {
         self.engine.apply_page(&page)
     }
 
+    /// 解码变更页，并校验帧头 `db_id` 与 `sender`。
+    pub fn decode_checked(&self, frame: &[u8], expected_sender: DeviceId) -> Result<ChangePage> {
+        let info = self.info()?;
+        let page = frame::decode_change_page_checked(info.db_id, expected_sender, frame)?;
+        for entry in &page.entries {
+            if let ChangeEntry::Record(change) = entry {
+                validate_record_change(change)?;
+            }
+        }
+        Ok(page)
+    }
+
+    /// 校验帧头并应用变更页。
+    pub fn apply_checked(&self, frame: &[u8], expected_sender: DeviceId) -> Result<ApplyReport> {
+        let page = self.decode_checked(frame, expected_sender)?;
+        self.engine.apply_page(&page)
+    }
+
+    /// 只校验帧头，不应用；上传前可用本机 `device_id` 自检。
+    pub fn validate_frame(&self, frame: &[u8], expected_sender: DeviceId) -> Result<()> {
+        let info = self.info()?;
+        frame::validate_frame(frame, info.db_id, expected_sender)?;
+        Ok(())
+    }
+
     pub fn offers(&self) -> Result<OfferPage> {
         let info = self.info()?;
         Ok(OfferPage {
@@ -110,6 +135,36 @@ impl<'a> Sync<'a> {
         Ok(())
     }
 
+    /// 解码 offer 页，并校验帧头 `db_id` 与 `sender`。
+    pub fn decode_offers_checked(
+        &self,
+        frame: &[u8],
+        expected_sender: DeviceId,
+    ) -> Result<OfferPage> {
+        let info = self.info()?;
+        frame::decode_offers_checked(info.db_id, expected_sender, frame)
+    }
+
+    /// 校验帧头并应用 offer 页。
+    pub fn apply_offers_checked(&self, frame: &[u8], expected_sender: DeviceId) -> Result<()> {
+        let page = self.decode_offers_checked(frame, expected_sender)?;
+        let entries = page
+            .offers
+            .into_iter()
+            .map(ChangeEntry::RotationOffer)
+            .collect();
+        self.engine.apply_page(&ChangePage {
+            sender: page.sender,
+            after: 0,
+            next: 0,
+            has_more: false,
+            log_start: 0,
+            log_end: 0,
+            entries,
+        })?;
+        Ok(())
+    }
+
     /// 快照起始位置与分页迭代器。
     pub fn snapshot(&self) -> Result<SnapshotIter<'a>> {
         let at_seq = self.engine.snapshot_start()?;
@@ -128,7 +183,7 @@ impl<'a> Sync<'a> {
 
     pub fn encode_snapshot(&self, page: &SnapshotPage) -> Result<Vec<u8>> {
         let info = self.info()?;
-        frame::encode_snapshot(info.db_id, page)
+        frame::encode_snapshot_with_sender(info.db_id, info.device_id, page)
     }
 
     pub fn decode_snapshot(&self, frame: &[u8]) -> Result<SnapshotPage> {
@@ -142,6 +197,26 @@ impl<'a> Sync<'a> {
 
     pub fn apply_snapshot_frame(&self, frame: &[u8]) -> Result<ApplyReport> {
         let page = self.decode_snapshot(frame)?;
+        self.engine.apply_snapshot_page(&page)
+    }
+
+    /// 解码快照页，并校验帧头 `db_id` 与 `sender`。
+    pub fn decode_snapshot_checked(
+        &self,
+        frame: &[u8],
+        expected_sender: DeviceId,
+    ) -> Result<SnapshotPage> {
+        let info = self.info()?;
+        frame::decode_snapshot_checked(info.db_id, expected_sender, frame)
+    }
+
+    /// 校验帧头并应用快照页。
+    pub fn apply_snapshot_frame_checked(
+        &self,
+        frame: &[u8],
+        expected_sender: DeviceId,
+    ) -> Result<ApplyReport> {
+        let page = self.decode_snapshot_checked(frame, expected_sender)?;
         self.engine.apply_snapshot_page(&page)
     }
 
@@ -205,6 +280,13 @@ impl<'a> Sync<'a> {
     pub fn apply_progress(&self, frame: &[u8]) -> Result<u64> {
         let info = self.info()?;
         let (device, cursor) = frame::decode_progress(info.db_id, frame)?;
+        self.engine.apply_peer_progress(device, cursor)
+    }
+
+    /// 应用对端的进度帧，并校验帧头 `db_id` 与 `sender`。
+    pub fn apply_progress_checked(&self, frame: &[u8], expected_sender: DeviceId) -> Result<u64> {
+        let info = self.info()?;
+        let (device, cursor) = frame::decode_progress_checked(info.db_id, expected_sender, frame)?;
         self.engine.apply_peer_progress(device, cursor)
     }
 
@@ -346,6 +428,18 @@ impl SyncHandle {
         self.sync().apply(frame)
     }
 
+    pub fn decode_checked(&self, frame: &[u8], expected_sender: DeviceId) -> Result<ChangePage> {
+        self.sync().decode_checked(frame, expected_sender)
+    }
+
+    pub fn apply_checked(&self, frame: &[u8], expected_sender: DeviceId) -> Result<ApplyReport> {
+        self.sync().apply_checked(frame, expected_sender)
+    }
+
+    pub fn validate_frame(&self, frame: &[u8], expected_sender: DeviceId) -> Result<()> {
+        self.sync().validate_frame(frame, expected_sender)
+    }
+
     pub fn offers(&self) -> Result<OfferPage> {
         self.sync().offers()
     }
@@ -360,6 +454,18 @@ impl SyncHandle {
 
     pub fn apply_offers(&self, frame: &[u8]) -> Result<()> {
         self.sync().apply_offers(frame)
+    }
+
+    pub fn decode_offers_checked(
+        &self,
+        frame: &[u8],
+        expected_sender: DeviceId,
+    ) -> Result<OfferPage> {
+        self.sync().decode_offers_checked(frame, expected_sender)
+    }
+
+    pub fn apply_offers_checked(&self, frame: &[u8], expected_sender: DeviceId) -> Result<()> {
+        self.sync().apply_offers_checked(frame, expected_sender)
     }
 
     pub fn snapshot(&self) -> Result<SnapshotIter<'_>> {
@@ -391,6 +497,23 @@ impl SyncHandle {
 
     pub fn apply_snapshot_frame(&self, frame: &[u8]) -> Result<ApplyReport> {
         self.sync().apply_snapshot_frame(frame)
+    }
+
+    pub fn decode_snapshot_checked(
+        &self,
+        frame: &[u8],
+        expected_sender: DeviceId,
+    ) -> Result<SnapshotPage> {
+        self.sync().decode_snapshot_checked(frame, expected_sender)
+    }
+
+    pub fn apply_snapshot_frame_checked(
+        &self,
+        frame: &[u8],
+        expected_sender: DeviceId,
+    ) -> Result<ApplyReport> {
+        self.sync()
+            .apply_snapshot_frame_checked(frame, expected_sender)
     }
 
     pub fn begin_rotation(&self) -> Result<RotationInfo> {
@@ -481,6 +604,10 @@ impl SyncHandle {
     /// 应用对端的进度帧；返回落盘后的已消费游标。
     pub fn apply_progress(&self, frame: &[u8]) -> Result<u64> {
         self.sync().apply_progress(frame)
+    }
+
+    pub fn apply_progress_checked(&self, frame: &[u8], expected_sender: DeviceId) -> Result<u64> {
+        self.sync().apply_progress_checked(frame, expected_sender)
     }
 
     /// 按对端进度自动裁剪变更日志；返回删除条数。

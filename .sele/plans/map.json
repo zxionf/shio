@@ -1,0 +1,40 @@
+{
+  "acceptance": [
+    {
+      "desc": "PA1 文档：docs/relay.md v0.2 与 .design/同步.md 对纯中继、channel 划分、校验归属的结论一致。",
+      "id": "PA1",
+      "requires_human": false,
+      "status": "pass",
+      "verified_at": "2026-11-01T11:48:42Z",
+      "verified_by": "agent"
+    },
+    {
+      "desc": "PA2 内核：shio-core 暴露唯一帧头校验入口，覆盖 magic/format/kind/db_id/sender/flags/长度/条目边界。",
+      "id": "PA2",
+      "requires_human": false,
+      "status": "pass",
+      "verified_at": "2026-11-01T11:48:42Z",
+      "verified_by": "agent"
+    },
+    {
+      "desc": "PA3 集成：changes/offers/snapshot/progress 的 decode/apply 路径复用统一校验；sender 不匹配与 progress 伪造有回归测试。",
+      "id": "PA3",
+      "requires_human": false,
+      "status": "pass",
+      "verified_at": "2026-11-01T11:48:42Z",
+      "verified_by": "agent"
+    }
+  ],
+  "approved_at": "2026-11-01T11:40:24Z",
+  "approved_by": "human:zxionf",
+  "created_at": "2026-11-01T11:38:44Z",
+  "goal": "对齐中继文档与同步设计结论，并把 SHY2 帧头校验下沉到 shio-core 统一入口，为内容无关 relay 的客户端契约提供可复用校验。",
+  "id": "map",
+  "lines": [
+    {
+      "depends": [],
+      "id": "sync"
+    }
+  ],
+  "status": "done"
+}
