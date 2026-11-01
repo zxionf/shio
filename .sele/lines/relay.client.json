@@ -1,0 +1,167 @@
+{
+  "acceptance": [
+    {
+      "desc": "A1 shio-ffi 暴露 shio_sync_validate_frame 与 changes/offers/snapshot/progress 的 checked apply；C header/ABI 测试通过。",
+      "id": "A1",
+      "requires_human": false,
+      "status": "unverified",
+      "verified_at": null,
+      "verified_by": null
+    },
+    {
+      "desc": "A2 Rust 客户端适配支持 db_id↔channel_id、push/pull、Idempotency-Key、Content-Type、progress、retained_from gap→快照重同步。",
+      "id": "A2",
+      "requires_human": false,
+      "status": "unverified",
+      "verified_at": null,
+      "verified_by": null
+    },
+    {
+      "desc": "A3 错误 sender、progress 伪造、gap 重同步与两设备+relay 端到端测试通过；workspace 测试/sele check 通过。",
+      "id": "A3",
+      "requires_human": false,
+      "status": "unverified",
+      "verified_at": null,
+      "verified_by": null
+    }
+  ],
+  "created_at": "2026-11-01T12:08:38Z",
+  "depends": [],
+  "goal": "把 checked 帧校验接到 C ABI，并提供 Rust relay 客户端适配与 gap/重同步回归。",
+  "id": "client",
+  "modules": [
+    "shio-ffi",
+    "shio-sync",
+    "shio",
+    "docs"
+  ],
+  "plan": "relay",
+  "status": "active",
+  "tasks": [
+    {
+      "acceptance": [
+        {
+          "desc": "A1 shio-ffi 暴露 shio_sync_validate_frame 与 changes/offers/snapshot/progress 的 checked apply；C header/ABI 测试通过。",
+          "id": "A1",
+          "requires_human": false,
+          "status": "unverified",
+          "verified_at": null,
+          "verified_by": null
+        }
+      ],
+      "archived_at": null,
+      "archived_git_head": null,
+      "created_at": "2026-11-01T12:08:55Z",
+      "current_step": null,
+      "depends": [],
+      "finished_at": null,
+      "goal": "FFI checked 帧校验与 apply 符号",
+      "id": "T1",
+      "line": "client",
+      "locked": {
+        "locked": false
+      },
+      "modules": [
+        "shio-ffi",
+        "shio-sync",
+        "docs"
+      ],
+      "pause_context": null,
+      "plan": "relay",
+      "review_policy": "mixed",
+      "skipped_count": 0,
+      "status": "todo",
+      "steps": [],
+      "title": "FFI checked 帧校验与 apply 符号",
+      "uid": "tsk_01M6BG6G36G4YE470HC6P0A13A"
+    },
+    {
+      "acceptance": [
+        {
+          "desc": "A1 支持 db_id↔channel_id、push/pull、Idempotency-Key、Content-Type、progress；测试通过。",
+          "id": "A1",
+          "requires_human": false,
+          "status": "unverified",
+          "verified_at": null,
+          "verified_by": null
+        }
+      ],
+      "archived_at": null,
+      "archived_git_head": null,
+      "created_at": "2026-11-01T12:08:55Z",
+      "current_step": null,
+      "depends": [],
+      "finished_at": null,
+      "goal": "Rust relay 客户端适配",
+      "id": "T2",
+      "line": "client",
+      "locked": {
+        "locked": false
+      },
+      "modules": [
+        "shio",
+        "shio-sync",
+        "docs"
+      ],
+      "pause_context": null,
+      "plan": "relay",
+      "review_policy": "mixed",
+      "skipped_count": 0,
+      "status": "todo",
+      "steps": [],
+      "title": "Rust relay 客户端适配",
+      "uid": "tsk_01M6BG6G3CPHNV8EF0PFHN1J8Y"
+    },
+    {
+      "acceptance": [
+        {
+          "desc": "A1 错误 sender、progress 伪造、retained_from gap→快照重同步与两设备+relay 端到端测试通过；workspace 测试与 sele check 通过。",
+          "id": "A1",
+          "requires_human": false,
+          "status": "unverified",
+          "verified_at": null,
+          "verified_by": null
+        }
+      ],
+      "archived_at": null,
+      "archived_git_head": null,
+      "created_at": "2026-11-01T12:08:55Z",
+      "current_step": null,
+      "depends": [
+        {
+          "type": "task",
+          "uid": "tsk_01M6BG6G36G4YE470HC6P0A13A"
+        },
+        {
+          "type": "task",
+          "uid": "tsk_01M6BG6G3CPHNV8EF0PFHN1J8Y"
+        },
+        {
+          "type": "task",
+          "uid": "tsk_01M6BG68DCNJSWWT25C1XYTZZ4"
+        }
+      ],
+      "finished_at": null,
+      "goal": "relay 客户端 gap/重同步与端到端回归",
+      "id": "T3",
+      "line": "client",
+      "locked": {
+        "locked": false
+      },
+      "modules": [
+        "shio",
+        "shio-sync",
+        "shio-ffi",
+        "docs"
+      ],
+      "pause_context": null,
+      "plan": "relay",
+      "review_policy": "mixed",
+      "skipped_count": 0,
+      "status": "todo",
+      "steps": [],
+      "title": "relay 客户端 gap/重同步与端到端回归",
+      "uid": "tsk_01M6BG6G42CSNAVE85SW50W2NE"
+    }
+  ]
+}

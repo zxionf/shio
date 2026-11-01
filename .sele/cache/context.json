@@ -1,4 +1,4 @@
 {
-  "line": "sync",
-  "plan": "map"
+  "line": "server",
+  "plan": "relay"
 }

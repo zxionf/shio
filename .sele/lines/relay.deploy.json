@@ -1,0 +1,114 @@
+{
+  "acceptance": [
+    {
+      "desc": "A1 relay.toml、systemd unit、Caddy/nginx TLS/HSTS 示例与备份/监控说明齐全。",
+      "id": "A1",
+      "requires_human": false,
+      "status": "unverified",
+      "verified_at": null,
+      "verified_by": null
+    },
+    {
+      "desc": "A2 本地部署冒烟步骤可复现；文档与 v0.2 实现一致；sele check 通过。",
+      "id": "A2",
+      "requires_human": false,
+      "status": "unverified",
+      "verified_at": null,
+      "verified_by": null
+    }
+  ],
+  "created_at": "2026-11-01T12:08:38Z",
+  "depends": [],
+  "goal": "补齐 relay 的 TLS/部署/运维文档与冒烟说明。",
+  "id": "deploy",
+  "modules": [
+    "docs"
+  ],
+  "plan": "relay",
+  "status": "active",
+  "tasks": [
+    {
+      "acceptance": [
+        {
+          "desc": "A1 relay.toml、systemd unit、Caddy/nginx TLS/HSTS 示例与备份/监控说明齐全。",
+          "id": "A1",
+          "requires_human": false,
+          "status": "unverified",
+          "verified_at": null,
+          "verified_by": null
+        }
+      ],
+      "archived_at": null,
+      "archived_git_head": null,
+      "created_at": "2026-11-01T12:09:01Z",
+      "current_step": null,
+      "depends": [],
+      "finished_at": null,
+      "goal": "编写 relay TLS/部署/运维文档",
+      "id": "T1",
+      "line": "deploy",
+      "locked": {
+        "locked": false
+      },
+      "modules": [
+        "docs"
+      ],
+      "pause_context": null,
+      "plan": "relay",
+      "review_policy": "mixed",
+      "skipped_count": 0,
+      "status": "todo",
+      "steps": [],
+      "title": "编写 relay TLS/部署/运维文档",
+      "uid": "tsk_01M6BG6PRM7XWM4QK6DJDQQG0Q"
+    },
+    {
+      "acceptance": [
+        {
+          "desc": "A1 本地部署冒烟步骤可复现；文档与 v0.2 实现一致；sele check 通过。",
+          "id": "A1",
+          "requires_human": false,
+          "status": "unverified",
+          "verified_at": null,
+          "verified_by": null
+        }
+      ],
+      "archived_at": null,
+      "archived_git_head": null,
+      "created_at": "2026-11-01T12:09:01Z",
+      "current_step": null,
+      "depends": [
+        {
+          "type": "task",
+          "uid": "tsk_01M6BG6PRM7XWM4QK6DJDQQG0Q"
+        },
+        {
+          "type": "task",
+          "uid": "tsk_01M6BG68DCNJSWWT25C1XYTZZ4"
+        },
+        {
+          "type": "task",
+          "uid": "tsk_01M6BG6G42CSNAVE85SW50W2NE"
+        }
+      ],
+      "finished_at": null,
+      "goal": "本地部署冒烟与文档收尾",
+      "id": "T2",
+      "line": "deploy",
+      "locked": {
+        "locked": false
+      },
+      "modules": [
+        "docs"
+      ],
+      "pause_context": null,
+      "plan": "relay",
+      "review_policy": "mixed",
+      "skipped_count": 0,
+      "status": "todo",
+      "steps": [],
+      "title": "本地部署冒烟与文档收尾",
+      "uid": "tsk_01M6BG6PRXCW6ZR9QY9T8RAD60"
+    }
+  ]
+}

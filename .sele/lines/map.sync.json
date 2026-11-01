@@ -205,14 +205,14 @@
       "archived_at": null,
       "archived_git_head": null,
       "created_at": "2026-11-01T11:40:31Z",
-      "current_step": "S5",
+      "current_step": null,
       "depends": [
         {
           "type": "task",
           "uid": "tsk_01M6BEJGSRR9PYWJJYJ63A4WKS"
         }
       ],
-      "finished_at": "2026-11-01T11:48:27Z",
+      "finished_at": "2026-11-01T11:54:42Z",
       "goal": "shio-sync 接入统一校验并补 sender 回归",
       "id": "T3",
       "line": "sync",
@@ -227,7 +227,7 @@
       "plan": "map",
       "review_policy": "mixed",
       "skipped_count": 0,
-      "status": "in_progress",
+      "status": "done",
       "steps": [
         {
           "desc": "",
@@ -281,7 +281,7 @@
           "locked": false,
           "requires_review": false,
           "skipped_reason": null,
-          "status": "in_progress",
+          "status": "done",
           "title": "提交本次 map.sync 改动"
         }
       ],
