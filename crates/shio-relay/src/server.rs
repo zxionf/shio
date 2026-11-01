@@ -487,10 +487,15 @@ async fn post_enroll_code(
 
 async fn post_enroll(
     State(state): State<AppState>,
+    headers: HeaderMap,
     Json(request): Json<EnrollRequest>,
 ) -> Result<Json<Value>, ApiError> {
     let device_id = normalize_device_id(&request.device_id)?;
     let code_hash = util::sha256_hex(request.enroll_code.as_bytes());
+    state
+        .rate
+        .check_enroll(&code_hash, client_ip(&headers))
+        .map_err(ApiError::too_many)?;
     let token = util::random_secret().map_err(ApiError::internal)?;
     let token_hash = util::sha256_hex(token.as_bytes());
     let (channel_id, device) = state
@@ -547,6 +552,22 @@ async fn delete_membership(
         .with_conn(|conn| store::revoke_membership(conn, &channel_id, &device_id, util::now_secs()))
         .map_err(ApiError::from)?;
     Ok(Json(json!({"removed": removed})))
+}
+
+fn client_ip(headers: &HeaderMap) -> Option<&str> {
+    headers
+        .get("x-forwarded-for")
+        .and_then(|value| value.to_str().ok())
+        .and_then(|value| value.split(',').next())
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .or_else(|| {
+            headers
+                .get("x-real-ip")
+                .and_then(|value| value.to_str().ok())
+                .map(str::trim)
+                .filter(|value| !value.is_empty())
+        })
 }
 
 fn normalize_device_id(value: &str) -> Result<String, ApiError> {

@@ -667,3 +667,31 @@ async fn quota_full_returns_507() {
     assert_eq!(status, StatusCode::INSUFFICIENT_STORAGE);
     assert_eq!(body["error"], "storage_full");
 }
+
+#[tokio::test]
+async fn enroll_rate_limit_is_enforced() {
+    let ctx = setup().await;
+    let device = "1".repeat(32);
+    let body = format!("{{\"enroll_code\":\"bad\",\"device_id\":\"{device}\"}}");
+    for _ in 0..10 {
+        let req = Request::builder()
+            .method("POST")
+            .uri("/v1/enroll")
+            .header("content-type", "application/json")
+            .header("x-forwarded-for", "203.0.113.9")
+            .body(Body::from(body.clone()))
+            .unwrap();
+        let (status, _) = send(&ctx.app, req).await;
+        assert_eq!(status, StatusCode::NOT_FOUND);
+    }
+    let req = Request::builder()
+        .method("POST")
+        .uri("/v1/enroll")
+        .header("content-type", "application/json")
+        .header("x-forwarded-for", "203.0.113.9")
+        .body(Body::from(body))
+        .unwrap();
+    let (status, body) = send(&ctx.app, req).await;
+    assert_eq!(status, StatusCode::TOO_MANY_REQUESTS);
+    assert_eq!(body["error"], "rate_limited");
+}

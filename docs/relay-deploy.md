@@ -182,8 +182,7 @@ sudo systemctl enable --now shio-relay-gc.timer
 ## 9. 当前实现边界
 
 - 内置 TLS 未实现；按本文用 Caddy/nginx。
-- 当前限流为每分钟固定窗口；per-token 并发上限 4 尚未实现。
-- `/v1/enroll` 尚未做 IP/code 级限流。
+- 限流：per-token 每分钟固定窗口 + 并发 4；`/v1/enroll` 按 code 10/min、IP 30/min（`X-Forwarded-For`/`X-Real-IP`）限流。
 - CLI 暂未提供 `stats` 子命令；用 `channel list` 与 `info` API 查看状态。
 
 ## 10. 本地冒烟

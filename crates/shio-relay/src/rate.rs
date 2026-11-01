@@ -6,6 +6,8 @@ use std::time::{Duration, Instant};
 
 const WINDOW: Duration = Duration::from_secs(60);
 const MAX_IN_FLIGHT: u32 = 4;
+const ENROLL_CODE_PER_MIN: u32 = 10;
+const ENROLL_IP_PER_MIN: u32 = 30;
 
 /// 每 device 的 channel 级与全局级限流器。
 pub struct RateLimiter {
@@ -44,6 +46,28 @@ impl RateLimiter {
             &mut inner,
             &format!("c:{device_id}:{channel_id}"),
             self.per_channel,
+            now,
+        )?;
+        Ok(())
+    }
+
+    /// `/v1/enroll` 的 code/IP 限流。
+    pub fn check_enroll(&self, code_hash: &str, ip: Option<&str>) -> Result<(), u64> {
+        let now = Instant::now();
+        let mut inner = match self.inner.lock() {
+            Ok(guard) => guard,
+            Err(_) => return Ok(()),
+        };
+        check_key(
+            &mut inner,
+            &format!("e:code:{code_hash}"),
+            ENROLL_CODE_PER_MIN,
+            now,
+        )?;
+        check_key(
+            &mut inner,
+            &format!("e:ip:{}", ip.unwrap_or("unknown")),
+            ENROLL_IP_PER_MIN,
             now,
         )?;
         Ok(())
@@ -137,5 +161,24 @@ mod tests {
         assert!(limiter.acquire("device").is_err());
         permits.pop();
         assert!(limiter.acquire("device").is_ok());
+    }
+
+    #[test]
+    fn enroll_code_and_ip_limits_are_enforced() {
+        let limiter = RateLimiter::new(60);
+        for _ in 0..ENROLL_CODE_PER_MIN {
+            assert!(limiter.check_enroll("code", Some("203.0.113.1")).is_ok());
+        }
+        assert!(limiter.check_enroll("code", Some("203.0.113.1")).is_err());
+
+        let limiter = RateLimiter::new(60);
+        for index in 0..ENROLL_IP_PER_MIN {
+            assert!(limiter
+                .check_enroll(&format!("code-{index}"), Some("203.0.113.2"))
+                .is_ok());
+        }
+        assert!(limiter
+            .check_enroll("another-code", Some("203.0.113.2"))
+            .is_err());
     }
 }
