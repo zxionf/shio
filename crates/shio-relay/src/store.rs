@@ -290,6 +290,21 @@ pub fn touch_device(conn: &Connection, device_id: &str, now: i64) -> Result<()> 
     Ok(())
 }
 
+/// 轮换 device token；旧 token 立即失效。
+pub fn rotate_token(conn: &Connection, device_id: &str, token_hash: &str) -> Result<bool> {
+    let result = conn.execute(
+        "UPDATE devices SET token_hash = ?1 WHERE device_id = ?2 AND revoked_at IS NULL",
+        params![token_hash, device_id],
+    );
+    match result {
+        Ok(changed) => Ok(changed > 0),
+        Err(err) if is_constraint(&err) => {
+            Err(RelayError::Conflict("token already exists".to_owned()))
+        }
+        Err(err) => Err(err.into()),
+    }
+}
+
 /// 加入或恢复 membership。
 pub fn upsert_membership(
     conn: &Connection,
@@ -464,6 +479,88 @@ pub fn delete_expired_enroll_codes(conn: &Connection, now: i64) -> Result<usize>
         params![now],
     )?;
     Ok(changed)
+}
+
+/// 用入网码创建新 device 与 membership。
+pub fn enroll_device(
+    conn: &mut Connection,
+    code_hash: &str,
+    device_id: &str,
+    token_hash: &str,
+    now: i64,
+) -> Result<(String, Device)> {
+    let tx = conn.transaction()?;
+    let code = enroll_code(&tx, code_hash)?.ok_or(RelayError::NotFound)?;
+    if code.used_at.is_some() {
+        return Err(RelayError::Conflict("enroll code already used".to_owned()));
+    }
+    if code.expires_at <= now {
+        return Err(RelayError::Expired("enroll code expired"));
+    }
+    if get_channel(&tx, &code.channel_id)?.is_none() {
+        return Err(RelayError::NotFound);
+    }
+    if device_by_id(&tx, device_id)?.is_some() {
+        return Err(RelayError::Conflict("device_exists".to_owned()));
+    }
+    tx.execute(
+        "INSERT INTO devices (device_id, token_hash, created_at, last_seen, revoked_at)
+         VALUES (?1, ?2, ?3, NULL, NULL)",
+        params![device_id, token_hash, now],
+    )?;
+    tx.execute(
+        "INSERT INTO memberships (channel_id, device_id, acked_cursor, created_at, revoked_at)
+         VALUES (?1, ?2, 0, ?3, NULL)",
+        params![code.channel_id, device_id, now],
+    )?;
+    let changed = tx.execute(
+        "UPDATE enroll_codes SET used_at = ?1 WHERE code_hash = ?2 AND used_at IS NULL",
+        params![now, code_hash],
+    )?;
+    if changed == 0 {
+        return Err(RelayError::Conflict("enroll code already used".to_owned()));
+    }
+    let device = device_by_id(&tx, device_id)?.ok_or(RelayError::NotFound)?;
+    tx.commit()?;
+    Ok((code.channel_id, device))
+}
+
+/// 已认证 device 用入网码加入 channel。
+pub fn consume_code_for_membership(
+    conn: &mut Connection,
+    code_hash: &str,
+    channel_id: &str,
+    device_id: &str,
+    now: i64,
+) -> Result<Membership> {
+    let tx = conn.transaction()?;
+    let code = enroll_code(&tx, code_hash)?.ok_or(RelayError::NotFound)?;
+    if code.channel_id != channel_id {
+        return Err(RelayError::InvalidArgument(
+            "enroll code belongs to another channel",
+        ));
+    }
+    if code.used_at.is_some() {
+        return Err(RelayError::Conflict("enroll code already used".to_owned()));
+    }
+    if code.expires_at <= now {
+        return Err(RelayError::Expired("enroll code expired"));
+    }
+    let device = device_by_id(&tx, device_id)?.ok_or(RelayError::NotFound)?;
+    if device.revoked_at.is_some() {
+        return Err(RelayError::Conflict("device is revoked".to_owned()));
+    }
+    upsert_membership(&tx, channel_id, device_id, now)?;
+    let changed = tx.execute(
+        "UPDATE enroll_codes SET used_at = ?1 WHERE code_hash = ?2 AND used_at IS NULL",
+        params![now, code_hash],
+    )?;
+    if changed == 0 {
+        return Err(RelayError::Conflict("enroll code already used".to_owned()));
+    }
+    let membership = membership(&tx, channel_id, device_id)?.ok_or(RelayError::NotFound)?;
+    tx.commit()?;
+    Ok(membership)
 }
 
 fn enroll_code(conn: &Connection, code_hash: &str) -> Result<Option<EnrollCode>> {

@@ -36,6 +36,11 @@ pub fn hex(bytes: &[u8]) -> String {
     out
 }
 
+/// 是否为 16 字节 hex 标识（32 个小写或大写 hex 字符）。
+pub fn is_hex_id(value: &str) -> bool {
+    value.len() == 32 && value.bytes().all(|byte| byte.is_ascii_hexdigit())
+}
+
 /// 当前 Unix 秒。
 pub fn now_secs() -> i64 {
     SystemTime::now()

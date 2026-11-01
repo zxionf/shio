@@ -7,7 +7,7 @@ use axum::extract::{DefaultBodyLimit, Path, Query, State};
 use axum::http::header::{AUTHORIZATION, CONTENT_TYPE};
 use axum::http::{HeaderMap, StatusCode};
 use axum::response::{IntoResponse, Response};
-use axum::routing::{get, post};
+use axum::routing::{delete, get, post};
 use axum::{Json, Router};
 use base64::engine::general_purpose::STANDARD as BASE64;
 use base64::Engine as _;
@@ -41,6 +41,19 @@ pub fn router(state: AppState) -> Router {
         )
         .route("/v1/channels/{channel_id}/ack", post(post_ack))
         .route("/v1/channels/{channel_id}/info", get(get_info))
+        .route(
+            "/v1/channels/{channel_id}/enroll-codes",
+            post(post_enroll_code),
+        )
+        .route(
+            "/v1/channels/{channel_id}/memberships",
+            post(post_membership),
+        )
+        .route(
+            "/v1/channels/{channel_id}/memberships/{device_id}",
+            delete(delete_membership),
+        )
+        .route("/v1/enroll", post(post_enroll))
         .layer(DefaultBodyLimit::max(max_body))
         .with_state(state)
 }
@@ -66,6 +79,19 @@ struct FrameQuery {
 struct AckRequest {
     cursor: i64,
 }
+
+#[derive(Debug, Deserialize)]
+struct EnrollRequest {
+    enroll_code: String,
+    device_id: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct MembershipRequest {
+    enroll_code: String,
+}
+
+const ENROLL_CODE_TTL_SECS: i64 = 10 * 60;
 
 #[derive(Debug)]
 struct ApiError {
@@ -116,6 +142,10 @@ impl From<RelayError> for ApiError {
             RelayError::Conflict(message) => {
                 let code = if message.contains("idempotency") {
                     "idempotency_conflict"
+                } else if message == "device_exists" {
+                    "device_exists"
+                } else if message.contains("enroll code already used") {
+                    "enroll_code_used"
                 } else {
                     "conflict"
                 };
@@ -126,7 +156,14 @@ impl From<RelayError> for ApiError {
                 "payload_too_large",
                 "payload exceeds the channel limit",
             ),
-            RelayError::Expired(message) => Self::new(StatusCode::GONE, "expired", message),
+            RelayError::Expired(message) => {
+                let code = if message.contains("enroll") {
+                    "enroll_code_expired"
+                } else {
+                    "expired"
+                };
+                Self::new(StatusCode::GONE, code, message)
+            }
             RelayError::InvalidArgument(message) => Self::bad_request("invalid_argument", message),
             other => Self::internal(other),
         }
@@ -152,7 +189,7 @@ fn bearer_token(headers: &HeaderMap) -> Option<&str> {
         .filter(|value| !value.is_empty())
 }
 
-fn authenticate(state: &AppState, headers: &HeaderMap, channel_id: &str) -> Result<Auth, ApiError> {
+fn authenticate_device(state: &AppState, headers: &HeaderMap) -> Result<store::Device, ApiError> {
     let token = bearer_token(headers).ok_or_else(|| ApiError::unauthorized("invalid_token"))?;
     let token_hash = util::sha256_hex(token.as_bytes());
     let device = state
@@ -163,6 +200,17 @@ fn authenticate(state: &AppState, headers: &HeaderMap, channel_id: &str) -> Resu
     if device.revoked_at.is_some() {
         return Err(ApiError::unauthorized("invalid_token"));
     }
+    if let Err(err) = state
+        .db
+        .with_conn(|conn| store::touch_device(conn, &device.device_id, util::now_secs()))
+    {
+        tracing::warn!(%err, "failed to update last_seen");
+    }
+    Ok(device)
+}
+
+fn authenticate(state: &AppState, headers: &HeaderMap, channel_id: &str) -> Result<Auth, ApiError> {
+    let device = authenticate_device(state, headers)?;
     let channel = state
         .db
         .with_conn(|conn| store::get_channel(conn, channel_id))
@@ -173,12 +221,6 @@ fn authenticate(state: &AppState, headers: &HeaderMap, channel_id: &str) -> Resu
         .with_conn(|conn| store::active_membership(conn, channel_id, &device.device_id))
         .map_err(ApiError::from)?
         .ok_or_else(|| ApiError::forbidden("not_a_member"))?;
-    if let Err(err) = state
-        .db
-        .with_conn(|conn| store::touch_device(conn, &device.device_id, util::now_secs()))
-    {
-        tracing::warn!(%err, "failed to update last_seen");
-    }
     Ok(Auth {
         device,
         channel,
@@ -374,6 +416,101 @@ async fn get_info(
         "max_payload_bytes": max_payload_bytes,
         "relay_version": env!("CARGO_PKG_VERSION"),
     })))
+}
+
+async fn post_enroll_code(
+    State(state): State<AppState>,
+    Path(channel_id): Path<String>,
+    headers: HeaderMap,
+) -> Result<Json<Value>, ApiError> {
+    authenticate(&state, &headers, &channel_id)?;
+    let code = util::random_secret().map_err(ApiError::internal)?;
+    let code_hash = util::sha256_hex(code.as_bytes());
+    let now = util::now_secs();
+    let expires_at = now + ENROLL_CODE_TTL_SECS;
+    state
+        .db
+        .with_conn(|conn| store::insert_enroll_code(conn, &code_hash, &channel_id, expires_at, now))
+        .map_err(ApiError::from)?;
+    Ok(Json(json!({
+        "enroll_code": code,
+        "expires_at": expires_at,
+    })))
+}
+
+async fn post_enroll(
+    State(state): State<AppState>,
+    Json(request): Json<EnrollRequest>,
+) -> Result<Json<Value>, ApiError> {
+    let device_id = normalize_device_id(&request.device_id)?;
+    let code_hash = util::sha256_hex(request.enroll_code.as_bytes());
+    let token = util::random_secret().map_err(ApiError::internal)?;
+    let token_hash = util::sha256_hex(token.as_bytes());
+    let (channel_id, device) = state
+        .db
+        .with_conn_mut(|conn| {
+            store::enroll_device(conn, &code_hash, &device_id, &token_hash, util::now_secs())
+        })
+        .map_err(ApiError::from)?;
+    Ok(Json(json!({
+        "token": token,
+        "device_id": device.device_id,
+        "channel_id": channel_id,
+    })))
+}
+
+async fn post_membership(
+    State(state): State<AppState>,
+    Path(channel_id): Path<String>,
+    headers: HeaderMap,
+    Json(request): Json<MembershipRequest>,
+) -> Result<Json<Value>, ApiError> {
+    let device = authenticate_device(&state, &headers)?;
+    let code_hash = util::sha256_hex(request.enroll_code.as_bytes());
+    let membership = state
+        .db
+        .with_conn_mut(|conn| {
+            store::consume_code_for_membership(
+                conn,
+                &code_hash,
+                &channel_id,
+                &device.device_id,
+                util::now_secs(),
+            )
+        })
+        .map_err(ApiError::from)?;
+    Ok(Json(json!({
+        "channel_id": membership.channel_id,
+        "device_id": membership.device_id,
+    })))
+}
+
+async fn delete_membership(
+    State(state): State<AppState>,
+    Path((channel_id, device_id)): Path<(String, String)>,
+    headers: HeaderMap,
+) -> Result<Json<Value>, ApiError> {
+    let auth = authenticate(&state, &headers, &channel_id)?;
+    let device_id = device_id.to_ascii_lowercase();
+    if device_id != auth.device.device_id {
+        return Err(ApiError::forbidden("forbidden"));
+    }
+    let removed = state
+        .db
+        .with_conn(|conn| store::revoke_membership(conn, &channel_id, &device_id, util::now_secs()))
+        .map_err(ApiError::from)?;
+    Ok(Json(json!({"removed": removed})))
+}
+
+fn normalize_device_id(value: &str) -> Result<String, ApiError> {
+    let value = value.to_ascii_lowercase();
+    if !util::is_hex_id(&value) {
+        return Err(ApiError::bad_request(
+            "invalid_device_id",
+            "device_id must be 32 hex characters",
+        ));
+    }
+    Ok(value)
 }
 
 /// 打开数据库并启动 HTTP 服务。
