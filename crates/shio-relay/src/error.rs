@@ -25,6 +25,18 @@ pub enum RelayError {
     /// 参数非法。
     #[error("invalid argument: {0}")]
     InvalidArgument(&'static str),
+    /// 资源不存在。
+    #[error("not found")]
+    NotFound,
+    /// 状态冲突。
+    #[error("conflict: {0}")]
+    Conflict(String),
+    /// payload 超过上限。
+    #[error("payload too large")]
+    PayloadTooLarge,
+    /// 凭据或入网码已过期。
+    #[error("expired: {0}")]
+    Expired(&'static str),
 }
 
 /// 中继结果。

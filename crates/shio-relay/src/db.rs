@@ -34,6 +34,7 @@ impl Db {
         }
         conn.pragma_update(None, "foreign_keys", "ON")?;
         conn.busy_timeout(Duration::from_secs(5))?;
+        crate::schema::init(&conn)?;
         Ok(Self {
             conn: Arc::new(Mutex::new(conn)),
         })

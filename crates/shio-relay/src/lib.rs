@@ -9,7 +9,10 @@
 pub mod config;
 pub mod db;
 pub mod error;
+pub mod schema;
 pub mod server;
+pub mod store;
+pub mod util;
 
 pub use config::Config;
 pub use error::{RelayError, Result};
