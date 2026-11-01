@@ -252,9 +252,58 @@ fn relay_client_pushes_pulls_and_applies() {
     assert_eq!(acked, info.next_seq - 1);
     assert_eq!(client_b.info().unwrap().acked_cursor, acked);
 
-    // 缺口标记：cursor 低于 retained_from 时不应用。
+    // 缺口标记：cursor 低于 retained_from 时报告 gap；没有可读帧时 applied=0。
     client_a.transport().retain_from(999);
     let report = client_b.pull_apply(0, 100).unwrap();
     assert!(report.gap);
     assert_eq!(report.applied, 0);
+}
+
+#[test]
+fn gap_applies_snapshot_and_retained_cursor() {
+    let dir = tempfile::tempdir().unwrap();
+    let a = create(&dir.path().join("a.redb"));
+    let info_a = a.enable_sync(None).unwrap();
+    let sync_a = Sync::new(&a);
+    let offer = sync_a.pairing_offer(Duration::from_secs(600)).unwrap();
+    let secret = decode_pairing_secret(&offer.secret).unwrap();
+    let b = Sync::accept_pairing(
+        options(&dir.path().join("b.redb")),
+        PASSWORD,
+        &offer,
+        &secret,
+    )
+    .unwrap();
+    let info_b = b.sync_info().unwrap();
+
+    let (relay_a, relay_b) = MemRelay::pair(info_a.device_id, info_b.device_id);
+    let mut client_a = RelayClient::new(Sync::new(&a), relay_a);
+    let mut client_b = RelayClient::new(Sync::new(&b), relay_b);
+
+    let id = RecordId::new_v7();
+    a.put("notes", "note", id, &"snapshot", 1).unwrap();
+    client_a.push_changes(0, 100).unwrap().unwrap();
+    let snapshot_seqs = client_a.push_snapshot(10).unwrap();
+    assert!(!snapshot_seqs.is_empty());
+    let first_snapshot = *snapshot_seqs.first().unwrap();
+    assert!(first_snapshot > 1);
+
+    // 模拟 relay 已淘汰快照之前的帧；B 的旧 cursor 触发 gap。
+    client_a.transport().retain_from(first_snapshot);
+    let report = client_b.pull_apply(0, 100).unwrap();
+    assert!(report.gap);
+    assert!(report.applied >= 1);
+    assert_eq!(report.retained_from, first_snapshot);
+    assert_eq!(
+        b.get::<String>("notes", "note", &id)
+            .unwrap()
+            .unwrap()
+            .value,
+        "snapshot"
+    );
+
+    // 从 retained_from 重拉不再是 gap。
+    let report = client_b.pull_from_retained(100).unwrap();
+    assert!(!report.gap);
+    assert!(report.next_cursor >= first_snapshot);
 }

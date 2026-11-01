@@ -178,7 +178,8 @@ impl<'a, T: RelayTransport> RelayClient<'a, T> {
 
     /// 拉取并应用一页；按 `content_type` 分派到 checked apply。
     ///
-    /// `gap = true` 时不应用任何帧，调用方应走快照重同步。
+    /// `gap = true` 表示 cursor 之前已丢帧；本页仍会被应用（可能包含快照）。
+    /// 调用方应随后用 [`Self::pull_from_retained`] 或让对方发布快照。
     pub fn pull_apply(&mut self, cursor: i64, limit: usize) -> Result<PullReport> {
         let channel_id = self.channel_id()?;
         let page = self.transport.pull(&channel_id, cursor, limit)?;
@@ -191,7 +192,6 @@ impl<'a, T: RelayTransport> RelayClient<'a, T> {
         };
         if page.retained_from > cursor.saturating_add(1) {
             report.gap = true;
-            return Ok(report);
         }
         for frame in page.frames {
             match frame.content_type.as_str() {
@@ -221,6 +221,14 @@ impl<'a, T: RelayTransport> RelayClient<'a, T> {
             }
         }
         Ok(report)
+    }
+
+    /// 从 `retained_from` 开始重拉；gap 后用它走快照重同步。
+    pub fn pull_from_retained(&mut self, limit: usize) -> Result<PullReport> {
+        let channel_id = self.channel_id()?;
+        let info = self.transport.info(&channel_id)?;
+        let cursor = info.retained_from.saturating_sub(1);
+        self.pull_apply(cursor, limit)
     }
 
     /// 推进 relay ack。

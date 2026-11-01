@@ -126,17 +126,17 @@
           "desc": "A1 支持 db_id↔channel_id、push/pull、Idempotency-Key、Content-Type、progress；测试通过。",
           "id": "A1",
           "requires_human": false,
-          "status": "unverified",
-          "verified_at": null,
-          "verified_by": null
+          "status": "pass",
+          "verified_at": "2026-11-01T13:21:59Z",
+          "verified_by": "agent"
         }
       ],
       "archived_at": null,
       "archived_git_head": null,
       "created_at": "2026-11-01T12:08:55Z",
-      "current_step": "S4",
+      "current_step": null,
       "depends": [],
-      "finished_at": null,
+      "finished_at": "2026-11-01T13:21:59Z",
       "goal": "Rust relay 客户端适配",
       "id": "T2",
       "line": "client",
@@ -152,7 +152,7 @@
       "plan": "relay",
       "review_policy": "mixed",
       "skipped_count": 0,
-      "status": "in_progress",
+      "status": "done",
       "steps": [
         {
           "desc": "",
@@ -195,7 +195,7 @@
           "locked": false,
           "requires_review": false,
           "skipped_reason": null,
-          "status": "in_progress",
+          "status": "done",
           "title": "跑 cargo test -p shio-sync 并提交"
         }
       ],
@@ -216,7 +216,7 @@
       "archived_at": null,
       "archived_git_head": null,
       "created_at": "2026-11-01T12:08:55Z",
-      "current_step": null,
+      "current_step": "S3",
       "depends": [
         {
           "type": "task",
@@ -248,8 +248,42 @@
       "plan": "relay",
       "review_policy": "mixed",
       "skipped_count": 0,
-      "status": "todo",
-      "steps": [],
+      "status": "in_progress",
+      "steps": [
+        {
+          "desc": "",
+          "id": "S1",
+          "jump_meta": null,
+          "lock_reason": null,
+          "locked": false,
+          "requires_review": false,
+          "skipped_reason": null,
+          "status": "done",
+          "title": "调整 pull_apply gap 行为并补快照重同步"
+        },
+        {
+          "desc": "",
+          "id": "S2",
+          "jump_meta": null,
+          "lock_reason": null,
+          "locked": false,
+          "requires_review": false,
+          "skipped_reason": null,
+          "status": "done",
+          "title": "补 gap→snapshot 回归与端到端测试"
+        },
+        {
+          "desc": "",
+          "id": "S3",
+          "jump_meta": null,
+          "lock_reason": null,
+          "locked": false,
+          "requires_review": false,
+          "skipped_reason": null,
+          "status": "in_progress",
+          "title": "跑 cargo test --workspace 与 sele check 并提交"
+        }
+      ],
       "title": "relay 客户端 gap/重同步与端到端回归",
       "uid": "tsk_01M6BG6G42CSNAVE85SW50W2NE"
     }
