@@ -581,6 +581,71 @@ async fn rate_limit_returns_429_with_retry_after() {
 }
 
 #[tokio::test]
+async fn two_device_push_pull_ack_gc_and_gap() {
+    let ctx = setup().await;
+
+    // A 推 3 帧。
+    for index in 0..3 {
+        let (status, _) = send(
+            &ctx.app,
+            post_frame_req(
+                &ctx,
+                &ctx.token_a,
+                &format!("k{index}"),
+                "text/plain",
+                b"payload",
+            ),
+        )
+        .await;
+        assert_eq!(status, StatusCode::OK);
+    }
+
+    // B 拉取并 ack 到 3。
+    let (status, body) = send(
+        &ctx.app,
+        get_frames_req(&ctx, &ctx.token_b, "cursor=0&limit=10"),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(body["frames"].as_array().unwrap().len(), 3);
+    let ack = Request::builder()
+        .method("POST")
+        .uri(format!("/v1/channels/{}/ack", ctx.channel))
+        .header("authorization", auth(&ctx.token_b))
+        .header("content-type", "application/json")
+        .body(Body::from("{\"cursor\":3}"))
+        .unwrap();
+    let (status, _) = send(&ctx.app, ack).await;
+    assert_eq!(status, StatusCode::OK);
+
+    // A 是发送者，B 已 ack 全部前缀；GC 删除 1..3。
+    let report = ctx
+        .db
+        .with_conn_mut(|conn| store::gc_channel(conn, &ctx.channel, 3600, util::now_secs(), false))
+        .unwrap();
+    assert_eq!(report.deleted, 3);
+    assert_eq!(report.retained_from, 4);
+
+    // A 再写一帧；B 用旧 cursor 读取会看到 retained_from 缺口。
+    let (status, _) = send(
+        &ctx.app,
+        post_frame_req(&ctx, &ctx.token_a, "k4", "text/plain", b"next"),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    let (status, body) = send(
+        &ctx.app,
+        get_frames_req(&ctx, &ctx.token_b, "cursor=0&limit=10"),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(body["retained_from"].as_i64(), Some(4));
+    let frames = body["frames"].as_array().unwrap();
+    assert_eq!(frames.len(), 1);
+    assert_eq!(frames[0]["seq"].as_i64(), Some(4));
+}
+
+#[tokio::test]
 async fn quota_full_returns_507() {
     let ctx = setup().await;
     let channel = "7".repeat(32);

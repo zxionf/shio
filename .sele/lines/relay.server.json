@@ -385,22 +385,22 @@
           "desc": "A1 前缀删除、retained_from、quota/TTL、幂等键/入网码清理、429/507；测试通过。",
           "id": "A1",
           "requires_human": false,
-          "status": "unverified",
-          "verified_at": null,
-          "verified_by": null
+          "status": "pass",
+          "verified_at": "2026-11-01T12:31:04Z",
+          "verified_by": "agent"
         }
       ],
       "archived_at": null,
       "archived_git_head": null,
       "created_at": "2026-11-01T12:08:47Z",
-      "current_step": "S4",
+      "current_step": null,
       "depends": [
         {
           "type": "task",
           "uid": "tsk_01M6BG68CS12G2K09JHJ6DX4T1"
         }
       ],
-      "finished_at": null,
+      "finished_at": "2026-11-01T12:31:04Z",
       "goal": "实现 GC/quota/TTL/retained_from、清理与限流",
       "id": "T5",
       "line": "server",
@@ -414,7 +414,7 @@
       "plan": "relay",
       "review_policy": "mixed",
       "skipped_count": 0,
-      "status": "in_progress",
+      "status": "done",
       "steps": [
         {
           "desc": "",
@@ -457,7 +457,7 @@
           "locked": false,
           "requires_review": false,
           "skipped_reason": null,
-          "status": "in_progress",
+          "status": "done",
           "title": "补 GC/限流测试并提交"
         }
       ],
@@ -478,7 +478,7 @@
       "archived_at": null,
       "archived_git_head": null,
       "created_at": "2026-11-01T12:08:47Z",
-      "current_step": null,
+      "current_step": "S3",
       "depends": [
         {
           "type": "task",
@@ -508,8 +508,42 @@
       "plan": "relay",
       "review_policy": "mixed",
       "skipped_count": 0,
-      "status": "todo",
-      "steps": [],
+      "status": "in_progress",
+      "steps": [
+        {
+          "desc": "",
+          "id": "S1",
+          "jump_meta": null,
+          "lock_reason": null,
+          "locked": false,
+          "requires_review": false,
+          "skipped_reason": null,
+          "status": "done",
+          "title": "补两设备/GC/gap 集成测试"
+        },
+        {
+          "desc": "",
+          "id": "S2",
+          "jump_meta": null,
+          "lock_reason": null,
+          "locked": false,
+          "requires_review": false,
+          "skipped_reason": null,
+          "status": "done",
+          "title": "补 crate README"
+        },
+        {
+          "desc": "",
+          "id": "S3",
+          "jump_meta": null,
+          "lock_reason": null,
+          "locked": false,
+          "requires_review": false,
+          "skipped_reason": null,
+          "status": "in_progress",
+          "title": "跑 cargo test/clippy/fmt 并提交"
+        }
+      ],
       "title": "补服务器集成测试与文档",
       "uid": "tsk_01M6BG68DCNJSWWT25C1XYTZZ4"
     }
