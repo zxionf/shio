@@ -44,17 +44,17 @@
           "desc": "A1 新 crate 实现 push/pull/ack/info；错误码映射完整；cargo test -p shio-relay-client 通过。",
           "id": "A1",
           "requires_human": false,
-          "status": "unverified",
-          "verified_at": null,
-          "verified_by": null
+          "status": "pass",
+          "verified_at": "2026-11-01T13:55:15Z",
+          "verified_by": "agent"
         }
       ],
       "archived_at": null,
       "archived_git_head": null,
       "created_at": "2026-11-01T13:41:56Z",
-      "current_step": "S3",
+      "current_step": null,
       "depends": [],
-      "finished_at": null,
+      "finished_at": "2026-11-01T13:55:15Z",
       "goal": "新建 shio-relay-client 与 HttpRelayTransport",
       "id": "T1",
       "line": "client",
@@ -69,7 +69,7 @@
       "plan": "hardening",
       "review_policy": "mixed",
       "skipped_count": 0,
-      "status": "in_progress",
+      "status": "done",
       "steps": [
         {
           "desc": "",
@@ -101,7 +101,7 @@
           "locked": false,
           "requires_review": false,
           "skipped_reason": null,
-          "status": "in_progress",
+          "status": "done",
           "title": "补 HTTP transport 单测并提交"
         }
       ],
@@ -122,7 +122,7 @@
       "archived_at": null,
       "archived_git_head": null,
       "created_at": "2026-11-01T13:41:56Z",
-      "current_step": null,
+      "current_step": "S2",
       "depends": [
         {
           "type": "task",
@@ -150,8 +150,31 @@
       "plan": "hardening",
       "review_policy": "mixed",
       "skipped_count": 0,
-      "status": "todo",
-      "steps": [],
+      "status": "in_progress",
+      "steps": [
+        {
+          "desc": "",
+          "id": "S1",
+          "jump_meta": null,
+          "lock_reason": null,
+          "locked": false,
+          "requires_review": false,
+          "skipped_reason": null,
+          "status": "done",
+          "title": "补 HTTP gap→snapshot 重同步测试"
+        },
+        {
+          "desc": "",
+          "id": "S2",
+          "jump_meta": null,
+          "lock_reason": null,
+          "locked": false,
+          "requires_review": false,
+          "skipped_reason": null,
+          "status": "in_progress",
+          "title": "跑 workspace 测试并提交"
+        }
+      ],
       "title": "补两设备 HTTP e2e",
       "uid": "tsk_01M6BNGV2PQPMMX9PENPT971TN"
     },

@@ -207,4 +207,15 @@ fn two_devices_over_http() {
         .unwrap();
     let report = client_b.pull_apply(0, 100).unwrap();
     assert!(report.gap);
+
+    // A 发布新快照；B 从 retained_from 重同步。
+    let snapshots = client_a.push_snapshot(10).unwrap();
+    assert!(!snapshots.is_empty());
+    let report = client_b.pull_apply(0, 100).unwrap();
+    assert!(report.gap);
+    assert!(report.frames >= 1);
+    assert!(report.applied + report.skipped >= 1);
+    let report = client_b.pull_from_retained(100).unwrap();
+    assert!(!report.gap);
+    assert!(report.next_cursor > 0);
 }
