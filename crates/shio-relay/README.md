@@ -1,7 +1,8 @@
 # shio-relay
 
 内容无关的同步中继。规格以 [`docs/relay.md`](../../docs/relay.md) v0.2 为准；中继只维护 channel 的
-payload 日志、设备游标与配额，不解析 payload。
+payload 日志、设备游标与配额，不解析 payload。部署、TLS 与运维见
+[`docs/relay-deploy.md`](../../docs/relay-deploy.md)。
 
 ## 构建与启动
 

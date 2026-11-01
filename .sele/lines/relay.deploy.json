@@ -41,7 +41,7 @@
       "archived_at": null,
       "archived_git_head": null,
       "created_at": "2026-11-01T12:09:01Z",
-      "current_step": null,
+      "current_step": "S2",
       "depends": [],
       "finished_at": null,
       "goal": "编写 relay TLS/部署/运维文档",
@@ -57,8 +57,31 @@
       "plan": "relay",
       "review_policy": "mixed",
       "skipped_count": 0,
-      "status": "todo",
-      "steps": [],
+      "status": "in_progress",
+      "steps": [
+        {
+          "desc": "",
+          "id": "S1",
+          "jump_meta": null,
+          "lock_reason": null,
+          "locked": false,
+          "requires_review": false,
+          "skipped_reason": null,
+          "status": "done",
+          "title": "写 relay.toml/systemd/TLS/备份/监控文档"
+        },
+        {
+          "desc": "",
+          "id": "S2",
+          "jump_meta": null,
+          "lock_reason": null,
+          "locked": false,
+          "requires_review": false,
+          "skipped_reason": null,
+          "status": "in_progress",
+          "title": "补 README 链接并校对"
+        }
+      ],
       "title": "编写 relay TLS/部署/运维文档",
       "uid": "tsk_01M6BG6PRM7XWM4QK6DJDQQG0Q"
     },
