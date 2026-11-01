@@ -44,17 +44,17 @@
           "desc": "A1 shio-ffi 暴露 shio_sync_validate_frame 与 changes/offers/snapshot/progress 的 checked apply；C header/ABI 测试通过。",
           "id": "A1",
           "requires_human": false,
-          "status": "unverified",
-          "verified_at": null,
-          "verified_by": null
+          "status": "pass",
+          "verified_at": "2026-11-01T13:19:29Z",
+          "verified_by": "agent"
         }
       ],
       "archived_at": null,
       "archived_git_head": null,
       "created_at": "2026-11-01T12:08:55Z",
-      "current_step": "S4",
+      "current_step": null,
       "depends": [],
-      "finished_at": null,
+      "finished_at": "2026-11-01T13:19:29Z",
       "goal": "FFI checked 帧校验与 apply 符号",
       "id": "T1",
       "line": "client",
@@ -70,7 +70,7 @@
       "plan": "relay",
       "review_policy": "mixed",
       "skipped_count": 0,
-      "status": "in_progress",
+      "status": "done",
       "steps": [
         {
           "desc": "",
@@ -113,7 +113,7 @@
           "locked": false,
           "requires_review": false,
           "skipped_reason": null,
-          "status": "in_progress",
+          "status": "done",
           "title": "跑 cargo test -p shio-ffi 并提交"
         }
       ],
@@ -134,7 +134,7 @@
       "archived_at": null,
       "archived_git_head": null,
       "created_at": "2026-11-01T12:08:55Z",
-      "current_step": null,
+      "current_step": "S4",
       "depends": [],
       "finished_at": null,
       "goal": "Rust relay 客户端适配",
@@ -152,8 +152,53 @@
       "plan": "relay",
       "review_policy": "mixed",
       "skipped_count": 0,
-      "status": "todo",
-      "steps": [],
+      "status": "in_progress",
+      "steps": [
+        {
+          "desc": "",
+          "id": "S1",
+          "jump_meta": null,
+          "lock_reason": null,
+          "locked": false,
+          "requires_review": false,
+          "skipped_reason": null,
+          "status": "done",
+          "title": "定义 RelayTransport 与 relay 数据类型"
+        },
+        {
+          "desc": "",
+          "id": "S2",
+          "jump_meta": null,
+          "lock_reason": null,
+          "locked": false,
+          "requires_review": false,
+          "skipped_reason": null,
+          "status": "done",
+          "title": "实现 RelayClient push/pull/apply/ack"
+        },
+        {
+          "desc": "",
+          "id": "S3",
+          "jump_meta": null,
+          "lock_reason": null,
+          "locked": false,
+          "requires_review": false,
+          "skipped_reason": null,
+          "status": "done",
+          "title": "补内存 relay 两设备测试"
+        },
+        {
+          "desc": "",
+          "id": "S4",
+          "jump_meta": null,
+          "lock_reason": null,
+          "locked": false,
+          "requires_review": false,
+          "skipped_reason": null,
+          "status": "in_progress",
+          "title": "跑 cargo test -p shio-sync 并提交"
+        }
+      ],
       "title": "Rust relay 客户端适配",
       "uid": "tsk_01M6BG6G3CPHNV8EF0PFHN1J8Y"
     },

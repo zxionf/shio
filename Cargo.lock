@@ -1047,6 +1047,7 @@ dependencies = [
 name = "shio-sync"
 version = "0.3.0"
 dependencies = [
+ "sha2",
  "shio-core",
  "tempfile",
 ]

@@ -12,6 +12,7 @@
 
 pub mod base32;
 pub mod frame;
+pub mod relay;
 
 use std::ops::Deref;
 use std::sync::Arc;
