@@ -316,6 +316,23 @@ int32_t shio_sync_apply(shio_kernel *handle,
                         uint8_t **out_report_json,
                         size_t *out_report_len);
 
+/*
+ * 增量符号：只校验 SHY2 帧头。expected_sender 为 relay 返回的 sender
+ * 或本机 device_id（16 字节，非空）。
+ */
+int32_t shio_sync_validate_frame(shio_kernel *handle,
+                                 const uint8_t *frame,
+                                 size_t frame_len,
+                                 const uint8_t *expected_sender);
+
+/* 增量符号：应用变更帧，并校验帧头 db_id/sender。 */
+int32_t shio_sync_apply_checked(shio_kernel *handle,
+                                const uint8_t *frame,
+                                size_t frame_len,
+                                const uint8_t *expected_sender,
+                                uint8_t **out_report_json,
+                                size_t *out_report_len);
+
 /* 本机待发送的轮换 offer 帧。 */
 int32_t shio_sync_offers(shio_kernel *handle,
                          uint8_t **out_frame,
@@ -325,6 +342,12 @@ int32_t shio_sync_offers(shio_kernel *handle,
 int32_t shio_sync_apply_offers(shio_kernel *handle,
                                const uint8_t *frame,
                                size_t frame_len);
+
+/* 增量符号：应用 offer 帧，并校验帧头 db_id/sender。 */
+int32_t shio_sync_apply_offers_checked(shio_kernel *handle,
+                                       const uint8_t *frame,
+                                       size_t frame_len,
+                                       const uint8_t *expected_sender);
 
 /* 快照起点；用于日志已压缩时的重同步。 */
 int32_t shio_sync_snapshot_start(shio_kernel *handle, uint64_t *out_at_seq);
@@ -350,6 +373,14 @@ int32_t shio_sync_apply_snapshot(shio_kernel *handle,
                                  size_t frame_len,
                                  uint8_t **out_report_json,
                                  size_t *out_report_len);
+
+/* 增量符号：应用快照帧，并校验帧头 db_id/sender。 */
+int32_t shio_sync_apply_snapshot_checked(shio_kernel *handle,
+                                         const uint8_t *frame,
+                                         size_t frame_len,
+                                         const uint8_t *expected_sender,
+                                         uint8_t **out_report_json,
+                                         size_t *out_report_len);
 
 /* 本机发起轮换；返回 rotation_info JSON。 */
 int32_t shio_sync_begin_rotation(shio_kernel *handle,
@@ -444,6 +475,13 @@ int32_t shio_sync_apply_progress(shio_kernel *handle,
                                  const uint8_t *frame,
                                  size_t frame_len,
                                  uint64_t *out_cursor);
+
+/* 增量符号：应用进度帧，并校验帧头 db_id/sender。 */
+int32_t shio_sync_apply_progress_checked(shio_kernel *handle,
+                                         const uint8_t *frame,
+                                         size_t frame_len,
+                                         const uint8_t *expected_sender,
+                                         uint64_t *out_cursor);
 
 /*
  * 按对端进度自动裁剪变更日志。

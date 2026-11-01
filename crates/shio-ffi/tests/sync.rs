@@ -1422,3 +1422,196 @@ fn forget_device_clears_peer_state() {
     // SAFETY: 关闭后 destroy，且没有其它线程继续使用。
     unsafe { shio_kernel_destroy(b) };
 }
+
+#[test]
+fn checked_symbols_require_matching_sender() {
+    let directory = tempfile::tempdir().unwrap();
+    let create = br#"{"create":true}"#;
+    let a = open(&directory.path().join("a.db"), b"checked", create);
+    let info_a = enable_sync(a);
+    let device_a = uuid_bytes(info_a["device_id"].as_str().unwrap());
+
+    let (pairing_frame, secret) = create_pairing(a);
+    let b = open_with_pairing(
+        &directory.path().join("b.db"),
+        b"checked",
+        &pairing_frame,
+        &secret,
+    );
+    let info_b = sync_info(b);
+    let device_b = uuid_bytes(info_b["device_id"].as_str().unwrap());
+
+    let namespace = CString::new("vault").unwrap();
+    let collection = CString::new("entries").unwrap();
+    insert(a, &namespace, &collection, br#"{"title":"hello"}"#);
+    let (change_frame, _, _) = changes(a, 0);
+
+    // validate：正确 sender 通过，错误 sender 拒绝。
+    // SAFETY: 句柄、帧与 sender 指针有效。
+    let status = unsafe {
+        shio_sync_validate_frame(
+            b,
+            change_frame.as_ptr(),
+            change_frame.len(),
+            device_a.as_ptr(),
+        )
+    };
+    assert_eq!(status, SHIO_OK, "validate failed: {}", last_error());
+    // SAFETY: 句柄、帧与 sender 指针有效。
+    let status = unsafe {
+        shio_sync_validate_frame(
+            b,
+            change_frame.as_ptr(),
+            change_frame.len(),
+            device_b.as_ptr(),
+        )
+    };
+    assert_eq!(status, SHIO_INVALID_ARGUMENT);
+
+    // apply_checked：错误 sender 不写入。
+    let mut report = ptr::null_mut();
+    let mut report_len = 0;
+    // SAFETY: 句柄、帧、sender 与输出指针有效。
+    let status = unsafe {
+        shio_sync_apply_checked(
+            b,
+            change_frame.as_ptr(),
+            change_frame.len(),
+            device_b.as_ptr(),
+            &mut report,
+            &mut report_len,
+        )
+    };
+    assert_eq!(status, SHIO_INVALID_ARGUMENT);
+    assert!(report.is_null());
+
+    let mut report = ptr::null_mut();
+    let mut report_len = 0;
+    // SAFETY: 句柄、帧、sender 与输出指针有效。
+    let status = unsafe {
+        shio_sync_apply_checked(
+            b,
+            change_frame.as_ptr(),
+            change_frame.len(),
+            device_a.as_ptr(),
+            &mut report,
+            &mut report_len,
+        )
+    };
+    assert_eq!(status, SHIO_OK, "apply_checked failed: {}", last_error());
+    let _ = parse(take_buffer(report, report_len));
+
+    // offers_checked。
+    let mut rotation_pointer = ptr::null_mut();
+    let mut rotation_len = 0;
+    // SAFETY: 句柄与输出指针有效。
+    let status = unsafe { shio_sync_begin_rotation(a, &mut rotation_pointer, &mut rotation_len) };
+    assert_eq!(status, SHIO_OK, "begin_rotation failed: {}", last_error());
+    let _ = parse(take_buffer(rotation_pointer, rotation_len));
+    let offer_frame = offers(a);
+    // SAFETY: 句柄、帧与 sender 指针有效。
+    let status = unsafe {
+        shio_sync_apply_offers_checked(
+            b,
+            offer_frame.as_ptr(),
+            offer_frame.len(),
+            device_b.as_ptr(),
+        )
+    };
+    assert_eq!(status, SHIO_INVALID_ARGUMENT);
+    // SAFETY: 句柄、帧与 sender 指针有效。
+    let status = unsafe {
+        shio_sync_apply_offers_checked(
+            b,
+            offer_frame.as_ptr(),
+            offer_frame.len(),
+            device_a.as_ptr(),
+        )
+    };
+    assert_eq!(
+        status,
+        SHIO_OK,
+        "apply_offers_checked failed: {}",
+        last_error()
+    );
+
+    // snapshot_checked。
+    let (snapshot_frame, _, _) = snapshot_page(a, None);
+    let mut report = ptr::null_mut();
+    let mut report_len = 0;
+    // SAFETY: 句柄、帧、sender 与输出指针有效。
+    let status = unsafe {
+        shio_sync_apply_snapshot_checked(
+            b,
+            snapshot_frame.as_ptr(),
+            snapshot_frame.len(),
+            device_b.as_ptr(),
+            &mut report,
+            &mut report_len,
+        )
+    };
+    assert_eq!(status, SHIO_INVALID_ARGUMENT);
+    assert!(report.is_null());
+
+    let mut report = ptr::null_mut();
+    let mut report_len = 0;
+    // SAFETY: 句柄、帧、sender 与输出指针有效。
+    let status = unsafe {
+        shio_sync_apply_snapshot_checked(
+            b,
+            snapshot_frame.as_ptr(),
+            snapshot_frame.len(),
+            device_a.as_ptr(),
+            &mut report,
+            &mut report_len,
+        )
+    };
+    assert_eq!(
+        status,
+        SHIO_OK,
+        "apply_snapshot_checked failed: {}",
+        last_error()
+    );
+    let _ = parse(take_buffer(report, report_len));
+
+    // progress_checked：错误 sender 不能推进 heard/。
+    let progress = progress_frame(b, &device_a);
+    let mut cursor = 0;
+    // SAFETY: 句柄、帧、sender 与输出指针有效。
+    let status = unsafe {
+        shio_sync_apply_progress_checked(
+            a,
+            progress.as_ptr(),
+            progress.len(),
+            device_a.as_ptr(),
+            &mut cursor,
+        )
+    };
+    assert_eq!(status, SHIO_INVALID_ARGUMENT);
+    assert_eq!(cursor, 0);
+    // SAFETY: 句柄、帧、sender 与输出指针有效。
+    let status = unsafe {
+        shio_sync_apply_progress_checked(
+            a,
+            progress.as_ptr(),
+            progress.len(),
+            device_b.as_ptr(),
+            &mut cursor,
+        )
+    };
+    assert_eq!(
+        status,
+        SHIO_OK,
+        "apply_progress_checked failed: {}",
+        last_error()
+    );
+
+    // SAFETY: 句柄有效。
+    unsafe { shio_close(a) };
+    // SAFETY: 句柄有效。
+    unsafe { shio_close(b) };
+    // SAFETY: 关闭后 destroy，且没有其它线程继续使用。
+    unsafe { shio_kernel_destroy(a) };
+    // SAFETY: 关闭后 destroy，且没有其它线程继续使用。
+    unsafe { shio_kernel_destroy(b) };
+}

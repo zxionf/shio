@@ -1431,6 +1431,74 @@ pub unsafe extern "C" fn shio_sync_apply(
     })
 }
 
+/// 只校验 SHY2 帧头；`expected_sender` 为 relay 返回的 sender 或本机 device_id。
+///
+/// 增量符号；旧 `shio_sync_apply` 保持兼容。
+///
+/// # Safety
+///
+/// 句柄、帧与 16 字节 `expected_sender` 必须按 `include/shio.h` 的契约有效。
+#[no_mangle]
+pub unsafe extern "C" fn shio_sync_validate_frame(
+    handle: *mut ShioKernel,
+    frame: *const u8,
+    frame_len: usize,
+    expected_sender: *const u8,
+) -> i32 {
+    ffi_guard(|| {
+        // SAFETY: 由调用方契约保证帧指针有效。
+        let frame = unsafe { input_bytes(frame, frame_len)? };
+        // SAFETY: 由调用方契约保证可选 sender 指针有效。
+        let expected_sender = input_optional_device_id(expected_sender)?
+            .ok_or(Error::InvalidArgument("expected sender is null"))?;
+        // SAFETY: 调用方保证句柄来自 `shio_open` 且未 destroy。
+        let handle =
+            unsafe { handle.as_ref() }.ok_or(Error::InvalidArgument("kernel handle is null"))?;
+        handle
+            .kernel()?
+            .sync()?
+            .validate_frame(frame, expected_sender)
+    })
+}
+
+/// 应用变更帧，并校验帧头 `db_id` / `sender`。
+///
+/// 增量符号；输出与 `shio_sync_apply` 相同。
+///
+/// # Safety
+///
+/// 句柄、帧、16 字节 `expected_sender` 与输出指针必须按 `include/shio.h` 有效。
+#[no_mangle]
+pub unsafe extern "C" fn shio_sync_apply_checked(
+    handle: *mut ShioKernel,
+    frame: *const u8,
+    frame_len: usize,
+    expected_sender: *const u8,
+    out_report_json: *mut *mut u8,
+    out_report_len: *mut usize,
+) -> i32 {
+    ffi_guard(|| {
+        reset_output(out_report_json, out_report_len)?;
+        // SAFETY: 由调用方契约保证帧指针有效。
+        let frame = unsafe { input_bytes(frame, frame_len)? };
+        // SAFETY: 由调用方契约保证可选 sender 指针有效。
+        let expected_sender = input_optional_device_id(expected_sender)?
+            .ok_or(Error::InvalidArgument("expected sender is null"))?;
+        // SAFETY: 调用方保证句柄来自 `shio_open` 且未 destroy。
+        let handle =
+            unsafe { handle.as_ref() }.ok_or(Error::InvalidArgument("kernel handle is null"))?;
+        let report = handle
+            .kernel()?
+            .sync()?
+            .apply_checked(frame, expected_sender)?;
+        set_output(
+            value_to_bytes(&apply_report_value(&report))?,
+            out_report_json,
+            out_report_len,
+        )
+    })
+}
+
 /// 生成本机待发送的轮换 offer 帧。
 ///
 /// # Safety
@@ -1472,6 +1540,36 @@ pub unsafe extern "C" fn shio_sync_apply_offers(
         let handle =
             unsafe { handle.as_ref() }.ok_or(Error::InvalidArgument("kernel handle is null"))?;
         handle.kernel()?.sync()?.apply_offers(frame)
+    })
+}
+
+/// 应用 offer 帧，并校验帧头 `db_id` / `sender`。
+///
+/// 增量符号；旧 `shio_sync_apply_offers` 保持兼容。
+///
+/// # Safety
+///
+/// 句柄、帧与 16 字节 `expected_sender` 必须按 `include/shio.h` 的契约有效。
+#[no_mangle]
+pub unsafe extern "C" fn shio_sync_apply_offers_checked(
+    handle: *mut ShioKernel,
+    frame: *const u8,
+    frame_len: usize,
+    expected_sender: *const u8,
+) -> i32 {
+    ffi_guard(|| {
+        // SAFETY: 由调用方契约保证帧指针有效。
+        let frame = unsafe { input_bytes(frame, frame_len)? };
+        // SAFETY: 由调用方契约保证可选 sender 指针有效。
+        let expected_sender = input_optional_device_id(expected_sender)?
+            .ok_or(Error::InvalidArgument("expected sender is null"))?;
+        // SAFETY: 调用方保证句柄来自 `shio_open` 且未 destroy。
+        let handle =
+            unsafe { handle.as_ref() }.ok_or(Error::InvalidArgument("kernel handle is null"))?;
+        handle
+            .kernel()?
+            .sync()?
+            .apply_offers_checked(frame, expected_sender)
     })
 }
 
@@ -1571,6 +1669,44 @@ pub unsafe extern "C" fn shio_sync_apply_snapshot(
         let handle =
             unsafe { handle.as_ref() }.ok_or(Error::InvalidArgument("kernel handle is null"))?;
         let report = handle.kernel()?.sync()?.apply_snapshot_frame(frame)?;
+        set_output(
+            value_to_bytes(&apply_report_value(&report))?,
+            out_report_json,
+            out_report_len,
+        )
+    })
+}
+
+/// 应用快照帧，并校验帧头 `db_id` / `sender`。
+///
+/// 增量符号；旧 `shio_sync_apply_snapshot` 保持兼容。
+///
+/// # Safety
+///
+/// 句柄、帧、16 字节 `expected_sender` 与输出指针必须按 `include/shio.h` 有效。
+#[no_mangle]
+pub unsafe extern "C" fn shio_sync_apply_snapshot_checked(
+    handle: *mut ShioKernel,
+    frame: *const u8,
+    frame_len: usize,
+    expected_sender: *const u8,
+    out_report_json: *mut *mut u8,
+    out_report_len: *mut usize,
+) -> i32 {
+    ffi_guard(|| {
+        reset_output(out_report_json, out_report_len)?;
+        // SAFETY: 由调用方契约保证帧指针有效。
+        let frame = unsafe { input_bytes(frame, frame_len)? };
+        // SAFETY: 由调用方契约保证可选 sender 指针有效。
+        let expected_sender = input_optional_device_id(expected_sender)?
+            .ok_or(Error::InvalidArgument("expected sender is null"))?;
+        // SAFETY: 调用方保证句柄来自 `shio_open` 且未 destroy。
+        let handle =
+            unsafe { handle.as_ref() }.ok_or(Error::InvalidArgument("kernel handle is null"))?;
+        let report = handle
+            .kernel()?
+            .sync()?
+            .apply_snapshot_frame_checked(frame, expected_sender)?;
         set_output(
             value_to_bytes(&apply_report_value(&report))?,
             out_report_json,
@@ -1978,6 +2114,46 @@ pub unsafe extern "C" fn shio_sync_apply_progress(
         let handle =
             unsafe { handle.as_ref() }.ok_or(Error::InvalidArgument("kernel handle is null"))?;
         let cursor = handle.kernel()?.sync()?.apply_progress(frame)?;
+        if !out_cursor.is_null() {
+            // SAFETY: 调用方提供了可写指针。
+            unsafe { *out_cursor = cursor };
+        }
+        Ok(())
+    })
+}
+
+/// 应用对端的进度帧，并校验帧头 `db_id` / `sender`。
+///
+/// 增量符号；旧 `shio_sync_apply_progress` 保持兼容。
+///
+/// # Safety
+///
+/// 句柄、帧、16 字节 `expected_sender` 与可选输出指针必须按 `include/shio.h` 有效。
+#[no_mangle]
+pub unsafe extern "C" fn shio_sync_apply_progress_checked(
+    handle: *mut ShioKernel,
+    frame: *const u8,
+    frame_len: usize,
+    expected_sender: *const u8,
+    out_cursor: *mut u64,
+) -> i32 {
+    ffi_guard(|| {
+        if !out_cursor.is_null() {
+            // SAFETY: 调用方提供了可写指针。
+            unsafe { *out_cursor = 0 };
+        }
+        // SAFETY: 由调用方契约保证帧指针有效。
+        let frame = unsafe { input_bytes(frame, frame_len)? };
+        // SAFETY: 由调用方契约保证可选 sender 指针有效。
+        let expected_sender = input_optional_device_id(expected_sender)?
+            .ok_or(Error::InvalidArgument("expected sender is null"))?;
+        // SAFETY: 调用方保证句柄来自 `shio_open` 且未 destroy。
+        let handle =
+            unsafe { handle.as_ref() }.ok_or(Error::InvalidArgument("kernel handle is null"))?;
+        let cursor = handle
+            .kernel()?
+            .sync()?
+            .apply_progress_checked(frame, expected_sender)?;
         if !out_cursor.is_null() {
             // SAFETY: 调用方提供了可写指针。
             unsafe { *out_cursor = cursor };

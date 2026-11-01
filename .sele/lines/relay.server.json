@@ -4,33 +4,33 @@
       "desc": "A1 shio-relay crate 可构建，serve 可启动，/healthz 返回 ok，配置从 relay.toml 读取。",
       "id": "A1",
       "requires_human": false,
-      "status": "unverified",
-      "verified_at": null,
-      "verified_by": null
+      "status": "pass",
+      "verified_at": "2026-11-01T12:38:04Z",
+      "verified_by": "agent"
     },
     {
       "desc": "A2 channels/frames/devices/memberships/enroll_codes schema 与数据访问完成；seq 事务分配、幂等、ack 只前进。",
       "id": "A2",
       "requires_human": false,
-      "status": "unverified",
-      "verified_at": null,
-      "verified_by": null
+      "status": "pass",
+      "verified_at": "2026-11-01T12:38:04Z",
+      "verified_by": "agent"
     },
     {
       "desc": "A3 帧/ack/info API 与 token+membership 鉴权按 v0.2 实现；payload 大小、content_type hint、排除自己。",
       "id": "A3",
       "requires_human": false,
-      "status": "unverified",
-      "verified_at": null,
-      "verified_by": null
+      "status": "pass",
+      "verified_at": "2026-11-01T12:38:04Z",
+      "verified_by": "agent"
     },
     {
       "desc": "A4 GC 前缀删除、retained_from、quota/TTL、幂等键/入网码清理、限流与错误码；cargo test -p shio-relay 通过。",
       "id": "A4",
       "requires_human": false,
-      "status": "unverified",
-      "verified_at": null,
-      "verified_by": null
+      "status": "pass",
+      "verified_at": "2026-11-01T12:38:04Z",
+      "verified_by": "agent"
     }
   ],
   "created_at": "2026-11-01T12:08:38Z",
@@ -42,7 +42,7 @@
     "docs"
   ],
   "plan": "relay",
-  "status": "active",
+  "status": "done",
   "tasks": [
     {
       "acceptance": [
@@ -470,15 +470,15 @@
           "desc": "A1 两设备推/拉/ack、幂等、GC、gap、auth/撤销；cargo test -p shio-relay 与 sele check 通过。",
           "id": "A1",
           "requires_human": false,
-          "status": "unverified",
-          "verified_at": null,
-          "verified_by": null
+          "status": "pass",
+          "verified_at": "2026-11-01T12:38:04Z",
+          "verified_by": "agent"
         }
       ],
       "archived_at": null,
       "archived_git_head": null,
       "created_at": "2026-11-01T12:08:47Z",
-      "current_step": "S3",
+      "current_step": null,
       "depends": [
         {
           "type": "task",
@@ -493,7 +493,7 @@
           "uid": "tsk_01M6BG68D604NSEEHBV01V061V"
         }
       ],
-      "finished_at": null,
+      "finished_at": "2026-11-01T12:38:04Z",
       "goal": "补服务器集成测试与文档",
       "id": "T6",
       "line": "server",
@@ -508,7 +508,7 @@
       "plan": "relay",
       "review_policy": "mixed",
       "skipped_count": 0,
-      "status": "in_progress",
+      "status": "done",
       "steps": [
         {
           "desc": "",
@@ -540,7 +540,7 @@
           "locked": false,
           "requires_review": false,
           "skipped_reason": null,
-          "status": "in_progress",
+          "status": "done",
           "title": "跑 cargo test/clippy/fmt 并提交"
         }
       ],
