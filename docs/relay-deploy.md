@@ -1,6 +1,8 @@
 # relay 部署与运维
 
 面向自建中继节点。传输规格见 [`relay.md`](relay.md) v0.2；本文只讲部署、TLS、备份与监控。
+可直接复制 [`deploy/`](../deploy/README.md) 下的 systemd、Caddyfile、nginx.conf 与
+`relay.toml.example`。
 
 ## 1. 目录与用户
 
