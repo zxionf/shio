@@ -1,0 +1,112 @@
+{
+  "acceptance": [
+    {
+      "desc": "A1 deploy/ 包含 systemd、Caddy、nginx、relay.toml 示例。",
+      "id": "A1",
+      "requires_human": false,
+      "status": "unverified",
+      "verified_at": null,
+      "verified_by": null
+    },
+    {
+      "desc": "A2 文档指向 deploy/ 文件，本地冒烟步骤可复现；sele check 通过。",
+      "id": "A2",
+      "requires_human": false,
+      "status": "unverified",
+      "verified_at": null,
+      "verified_by": null
+    }
+  ],
+  "created_at": "2026-11-03T07:57:56Z",
+  "depends": [],
+  "goal": "提供可直接使用的 relay 部署文件与文档。",
+  "id": "deploy",
+  "modules": [
+    "deploy",
+    "docs"
+  ],
+  "plan": "ops",
+  "status": "active",
+  "tasks": [
+    {
+      "acceptance": [
+        {
+          "desc": "A1 deploy/ 包含 systemd unit、Caddyfile、nginx.conf、relay.toml.example；内容与 v0.2 一致。",
+          "id": "A1",
+          "requires_human": false,
+          "status": "unverified",
+          "verified_at": null,
+          "verified_by": null
+        }
+      ],
+      "archived_at": null,
+      "archived_git_head": null,
+      "created_at": "2026-11-03T07:58:18Z",
+      "current_step": null,
+      "depends": [],
+      "finished_at": null,
+      "goal": "创建 deploy/ 部署文件",
+      "id": "T1",
+      "line": "deploy",
+      "locked": {
+        "locked": false
+      },
+      "modules": [
+        "deploy"
+      ],
+      "pause_context": null,
+      "plan": "ops",
+      "review_policy": "mixed",
+      "skipped_count": 0,
+      "status": "todo",
+      "steps": [],
+      "title": "创建 deploy/ 部署文件",
+      "uid": "tsk_01M6G6N22WN8J4298HTFP79PRD"
+    },
+    {
+      "acceptance": [
+        {
+          "desc": "A1 文档指向 deploy/ 文件；本地 serve/healthz/CLI 冒烟可复现；sele check 通过。",
+          "id": "A1",
+          "requires_human": false,
+          "status": "unverified",
+          "verified_at": null,
+          "verified_by": null
+        }
+      ],
+      "archived_at": null,
+      "archived_git_head": null,
+      "created_at": "2026-11-03T07:58:18Z",
+      "current_step": null,
+      "depends": [
+        {
+          "type": "task",
+          "uid": "tsk_01M6G6N22WN8J4298HTFP79PRD"
+        },
+        {
+          "type": "task",
+          "uid": "tsk_01M6G6MPA4WE2VNSG4N721RNBK"
+        }
+      ],
+      "finished_at": null,
+      "goal": "更新部署文档并冒烟",
+      "id": "T2",
+      "line": "deploy",
+      "locked": {
+        "locked": false
+      },
+      "modules": [
+        "deploy",
+        "docs"
+      ],
+      "pause_context": null,
+      "plan": "ops",
+      "review_policy": "mixed",
+      "skipped_count": 0,
+      "status": "todo",
+      "steps": [],
+      "title": "更新部署文档并冒烟",
+      "uid": "tsk_01M6G6N238243J12EGVWFNNCRR"
+    }
+  ]
+}

@@ -5,6 +5,7 @@ use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
 const WINDOW: Duration = Duration::from_secs(60);
+const SWEEP_INTERVAL: Duration = Duration::from_secs(60);
 const MAX_IN_FLIGHT: u32 = 4;
 const ENROLL_CODE_PER_MIN: u32 = 10;
 const ENROLL_IP_PER_MIN: u32 = 30;
@@ -15,6 +16,7 @@ pub struct RateLimiter {
     global: u32,
     inner: Mutex<HashMap<String, Window>>,
     in_flight: Mutex<HashMap<String, u32>>,
+    last_sweep: Mutex<Instant>,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -31,12 +33,14 @@ impl RateLimiter {
             global: per_channel.saturating_mul(4).max(per_channel),
             inner: Mutex::new(HashMap::new()),
             in_flight: Mutex::new(HashMap::new()),
+            last_sweep: Mutex::new(Instant::now()),
         }
     }
 
     /// 检查并记一次请求；超限时返回 `Retry-After` 秒数。
     pub fn check(&self, device_id: &str, channel_id: &str) -> Result<(), u64> {
         let now = Instant::now();
+        self.maybe_sweep(now);
         let mut inner = match self.inner.lock() {
             Ok(guard) => guard,
             Err(_) => return Ok(()),
@@ -54,6 +58,7 @@ impl RateLimiter {
     /// `/v1/enroll` 的 code/IP 限流。
     pub fn check_enroll(&self, code_hash: &str, ip: Option<&str>) -> Result<(), u64> {
         let now = Instant::now();
+        self.maybe_sweep(now);
         let mut inner = match self.inner.lock() {
             Ok(guard) => guard,
             Err(_) => return Ok(()),
@@ -75,6 +80,7 @@ impl RateLimiter {
 
     /// 获取一个 per-token 并发 permit；上限 4。
     pub fn acquire(self: &Arc<Self>, device_id: &str) -> Result<RatePermit, u64> {
+        self.maybe_sweep(Instant::now());
         let mut in_flight = match self.in_flight.lock() {
             Ok(guard) => guard,
             Err(_) => return Err(1),
@@ -88,6 +94,20 @@ impl RateLimiter {
             limiter: Arc::clone(self),
             device_id: device_id.to_owned(),
         })
+    }
+
+    fn maybe_sweep(&self, now: Instant) {
+        let mut last = match self.last_sweep.lock() {
+            Ok(guard) => guard,
+            Err(_) => return,
+        };
+        if now.duration_since(*last) < SWEEP_INTERVAL {
+            return;
+        }
+        *last = now;
+        if let Ok(mut inner) = self.inner.lock() {
+            inner.retain(|_, window| now.duration_since(window.started) < WINDOW.saturating_mul(2));
+        }
     }
 }
 
@@ -180,5 +200,26 @@ mod tests {
         assert!(limiter
             .check_enroll("another-code", Some("203.0.113.2"))
             .is_err());
+    }
+
+    #[test]
+    fn sweep_removes_stale_windows() {
+        let limiter = RateLimiter::new(2);
+        limiter.check("device", "channel").unwrap();
+        let stale = Instant::now() - WINDOW.saturating_mul(2) - Duration::from_secs(1);
+        {
+            let mut inner = limiter.inner.lock().unwrap();
+            for window in inner.values_mut() {
+                window.started = stale;
+            }
+        }
+        *limiter.last_sweep.lock().unwrap() =
+            Instant::now() - SWEEP_INTERVAL - Duration::from_secs(1);
+        limiter.check("device", "other").unwrap();
+        assert!(!limiter
+            .inner
+            .lock()
+            .unwrap()
+            .contains_key("c:device:channel"));
     }
 }

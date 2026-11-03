@@ -4,25 +4,25 @@
       "desc": "PA1 新增 shio-relay-client（或等价）实现真实 HTTP RelayTransport；两设备 + 真实 HTTP relay 端到端通过。",
       "id": "PA1",
       "requires_human": false,
-      "status": "unverified",
-      "verified_at": null,
-      "verified_by": null
+      "status": "pass",
+      "verified_at": "2026-11-01T13:58:58Z",
+      "verified_by": "agent"
     },
     {
       "desc": "PA2 shio-relay 实现 per-token 并发 4、/v1/enroll code/IP 限流、relay stats --channel。",
       "id": "PA2",
       "requires_human": false,
-      "status": "unverified",
-      "verified_at": null,
-      "verified_by": null
+      "status": "pass",
+      "verified_at": "2026-11-01T13:58:58Z",
+      "verified_by": "agent"
     },
     {
       "desc": "PA3 文档与测试更新；cargo test --workspace 与 sele check 通过。",
       "id": "PA3",
       "requires_human": false,
-      "status": "unverified",
-      "verified_at": null,
-      "verified_by": null
+      "status": "pass",
+      "verified_at": "2026-11-01T13:58:58Z",
+      "verified_by": "agent"
     }
   ],
   "approved_at": "2026-11-01T13:41:27Z",
@@ -40,5 +40,5 @@
       "id": "client"
     }
   ],
-  "status": "active"
+  "status": "done"
 }
