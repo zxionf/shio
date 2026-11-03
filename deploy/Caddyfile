@@ -1,0 +1,12 @@
+relay.example.com {
+    encode zstd gzip
+    header {
+        Strict-Transport-Security "max-age=15552000; includeSubDomains"
+        X-Content-Type-Options "nosniff"
+    }
+    reverse_proxy 127.0.0.1:8080 {
+        # 覆盖而不是追加，避免客户端伪造 XFF；开启 trust_proxy_headers 才安全。
+        header_up X-Forwarded-For {remote_host}
+        header_up X-Real-IP {remote_host}
+    }
+}

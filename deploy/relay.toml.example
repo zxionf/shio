@@ -1,0 +1,11 @@
+# /etc/shio-relay/relay.toml
+listen = "127.0.0.1:8080"
+data = "/var/lib/shio-relay/relay.db"
+frame_ttl_secs = 2592000        # 30 天
+channel_quota_bytes = 104857600 # 100 MB
+max_payload_bytes = 8388608     # 8 MiB
+rate_limit_per_min = 60
+
+# 仅在可信反代覆盖 X-Forwarded-For / X-Real-IP 时开启。
+# 直连部署保持 false。
+trust_proxy_headers = true

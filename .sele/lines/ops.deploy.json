@@ -42,7 +42,7 @@
       "archived_at": null,
       "archived_git_head": null,
       "created_at": "2026-11-03T07:58:18Z",
-      "current_step": null,
+      "current_step": "S2",
       "depends": [],
       "finished_at": null,
       "goal": "创建 deploy/ 部署文件",
@@ -58,8 +58,31 @@
       "plan": "ops",
       "review_policy": "mixed",
       "skipped_count": 0,
-      "status": "todo",
-      "steps": [],
+      "status": "in_progress",
+      "steps": [
+        {
+          "desc": "",
+          "id": "S1",
+          "jump_meta": null,
+          "lock_reason": null,
+          "locked": false,
+          "requires_review": false,
+          "skipped_reason": null,
+          "status": "done",
+          "title": "创建 deploy/ 下的 systemd/Caddy/nginx/relay.toml 示例"
+        },
+        {
+          "desc": "",
+          "id": "S2",
+          "jump_meta": null,
+          "lock_reason": null,
+          "locked": false,
+          "requires_review": false,
+          "skipped_reason": null,
+          "status": "in_progress",
+          "title": "校对转发头覆盖并提交"
+        }
+      ],
       "title": "创建 deploy/ 部署文件",
       "uid": "tsk_01M6G6N22WN8J4298HTFP79PRD"
     },

@@ -1,0 +1,9 @@
+[Unit]
+Description=shio relay GC
+After=shio-relay.service
+
+[Service]
+Type=oneshot
+User=shio-relay
+Group=shio-relay
+ExecStart=/usr/local/bin/relay --config /etc/shio-relay/relay.toml gc --now

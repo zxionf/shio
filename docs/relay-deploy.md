@@ -90,7 +90,11 @@ relay.example.com {
         Strict-Transport-Security "max-age=15552000; includeSubDomains"
         X-Content-Type-Options "nosniff"
     }
-    reverse_proxy 127.0.0.1:8080
+    reverse_proxy 127.0.0.1:8080 {
+        # 覆盖而不是追加，避免客户端伪造 XFF。
+        header_up X-Forwarded-For {remote_host}
+        header_up X-Real-IP {remote_host}
+    }
 }
 ```
 
@@ -120,7 +124,9 @@ server {
         proxy_pass http://127.0.0.1:8080;
         proxy_http_version 1.1;
         proxy_set_header Host $host;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        # 覆盖而不是追加，避免客户端伪造 XFF。
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_request_buffering off;
     }
@@ -129,6 +135,7 @@ server {
 
 - 最低 TLS 1.2（优先 1.3）；HSTS `max-age=15552000`。
 - 反代日志不要记录 `Authorization`；IP 只保留 7 天。
+- 可直接复制 `deploy/` 下的 systemd、Caddyfile、nginx.conf 示例。
 
 ## 6. 备份与恢复
 

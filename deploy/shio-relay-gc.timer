@@ -1,0 +1,9 @@
+[Unit]
+Description=Daily shio relay GC
+
+[Timer]
+OnCalendar=daily
+Persistent=true
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,22 @@
+[Unit]
+Description=shio relay
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=shio-relay
+Group=shio-relay
+Environment=RUST_LOG=info
+ExecStart=/usr/local/bin/relay --config /etc/shio-relay/relay.toml serve
+Restart=on-failure
+RestartSec=3
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/shio-relay
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target

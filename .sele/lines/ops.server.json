@@ -4,33 +4,33 @@
       "desc": "A1 RateLimiter 定期清理过期窗口，长期运行内存有界。",
       "id": "A1",
       "requires_human": false,
-      "status": "unverified",
-      "verified_at": null,
-      "verified_by": null
+      "status": "pass",
+      "verified_at": "2026-11-03T08:04:25Z",
+      "verified_by": "agent"
     },
     {
       "desc": "A2 trust_proxy_headers 默认关闭；关闭时忽略 XFF，开启时才使用。",
       "id": "A2",
       "requires_human": false,
-      "status": "unverified",
-      "verified_at": null,
-      "verified_by": null
+      "status": "pass",
+      "verified_at": "2026-11-03T08:04:25Z",
+      "verified_by": "agent"
     },
     {
       "desc": "A3 请求日志不含 token/payload；relay stats --json 可供监控。",
       "id": "A3",
       "requires_human": false,
-      "status": "unverified",
-      "verified_at": null,
-      "verified_by": null
+      "status": "pass",
+      "verified_at": "2026-11-03T08:04:25Z",
+      "verified_by": "agent"
     },
     {
       "desc": "A4 测试/文档更新；cargo test -p shio-relay、clippy/fmt、sele check 通过。",
       "id": "A4",
       "requires_human": false,
-      "status": "unverified",
-      "verified_at": null,
-      "verified_by": null
+      "status": "pass",
+      "verified_at": "2026-11-03T08:04:25Z",
+      "verified_by": "agent"
     }
   ],
   "created_at": "2026-11-03T07:57:56Z",
@@ -42,7 +42,7 @@
     "docs"
   ],
   "plan": "ops",
-  "status": "active",
+  "status": "done",
   "tasks": [
     {
       "acceptance": [
@@ -189,17 +189,17 @@
           "desc": "A1 请求日志只记 method/path/status/耗时，不含 token/payload；relay stats --json 输出可解析 JSON。",
           "id": "A1",
           "requires_human": false,
-          "status": "unverified",
-          "verified_at": null,
-          "verified_by": null
+          "status": "pass",
+          "verified_at": "2026-11-03T08:04:16Z",
+          "verified_by": "agent"
         }
       ],
       "archived_at": null,
       "archived_git_head": null,
       "created_at": "2026-11-03T07:58:06Z",
-      "current_step": "S3",
+      "current_step": null,
       "depends": [],
-      "finished_at": null,
+      "finished_at": "2026-11-03T08:04:16Z",
       "goal": "请求日志与 stats --json",
       "id": "T3",
       "line": "server",
@@ -214,7 +214,7 @@
       "plan": "ops",
       "review_policy": "mixed",
       "skipped_count": 0,
-      "status": "in_progress",
+      "status": "done",
       "steps": [
         {
           "desc": "",
@@ -246,7 +246,7 @@
           "locked": false,
           "requires_review": false,
           "skipped_reason": null,
-          "status": "in_progress",
+          "status": "done",
           "title": "跑测试并提交"
         }
       ],
@@ -259,9 +259,9 @@
           "desc": "A1 上述测试/文档齐全；cargo test -p shio-relay、clippy/fmt、sele check 通过。",
           "id": "A1",
           "requires_human": false,
-          "status": "unverified",
-          "verified_at": null,
-          "verified_by": null
+          "status": "pass",
+          "verified_at": "2026-11-03T08:04:25Z",
+          "verified_by": "agent"
         }
       ],
       "archived_at": null,
@@ -282,7 +282,7 @@
           "uid": "tsk_01M6G6MP9S1J6NCZV6KYQ1KRX7"
         }
       ],
-      "finished_at": null,
+      "finished_at": "2026-11-03T08:04:25Z",
       "goal": "补 ops server 测试与文档",
       "id": "T4",
       "line": "server",
@@ -297,8 +297,31 @@
       "plan": "ops",
       "review_policy": "mixed",
       "skipped_count": 0,
-      "status": "todo",
-      "steps": [],
+      "status": "done",
+      "steps": [
+        {
+          "desc": "",
+          "id": "S1",
+          "jump_meta": null,
+          "lock_reason": null,
+          "locked": false,
+          "requires_review": false,
+          "skipped_reason": null,
+          "status": "done",
+          "title": "跑 ops server 测试与 clippy/fmt"
+        },
+        {
+          "desc": "",
+          "id": "S2",
+          "jump_meta": null,
+          "lock_reason": null,
+          "locked": false,
+          "requires_review": false,
+          "skipped_reason": null,
+          "status": "done",
+          "title": "sele check 并收口 server 线"
+        }
+      ],
       "title": "补 ops server 测试与文档",
       "uid": "tsk_01M6G6MPA4WE2VNSG4N721RNBK"
     }
