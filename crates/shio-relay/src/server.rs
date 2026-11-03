@@ -494,7 +494,10 @@ async fn post_enroll(
     let code_hash = util::sha256_hex(request.enroll_code.as_bytes());
     state
         .rate
-        .check_enroll(&code_hash, client_ip(&headers))
+        .check_enroll(
+            &code_hash,
+            client_ip(&headers, state.config.trust_proxy_headers),
+        )
         .map_err(ApiError::too_many)?;
     let token = util::random_secret().map_err(ApiError::internal)?;
     let token_hash = util::sha256_hex(token.as_bytes());
@@ -554,7 +557,10 @@ async fn delete_membership(
     Ok(Json(json!({"removed": removed})))
 }
 
-fn client_ip(headers: &HeaderMap) -> Option<&str> {
+fn client_ip(headers: &HeaderMap, trust_proxy_headers: bool) -> Option<&str> {
+    if !trust_proxy_headers {
+        return None;
+    }
     headers
         .get("x-forwarded-for")
         .and_then(|value| value.to_str().ok())

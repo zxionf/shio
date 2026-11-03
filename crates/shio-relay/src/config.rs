@@ -37,6 +37,8 @@ pub struct Config {
     pub max_payload_bytes: u64,
     /// 每 token 每分钟请求数。
     pub rate_limit_per_min: u32,
+    /// 是否信任反代写入的 `X-Forwarded-For` / `X-Real-IP`。
+    pub trust_proxy_headers: bool,
 }
 
 impl Default for Config {
@@ -48,6 +50,7 @@ impl Default for Config {
             channel_quota_bytes: DEFAULT_CHANNEL_QUOTA_BYTES,
             max_payload_bytes: DEFAULT_MAX_PAYLOAD_BYTES,
             rate_limit_per_min: DEFAULT_RATE_LIMIT_PER_MIN,
+            trust_proxy_headers: false,
         }
     }
 }
@@ -120,7 +123,9 @@ mod tests {
 
     #[test]
     fn defaults_are_valid() {
-        Config::default().validate().unwrap();
+        let config = Config::default();
+        config.validate().unwrap();
+        assert!(!config.trust_proxy_headers);
     }
 
     #[test]
@@ -136,6 +141,7 @@ frame_ttl_secs = 60
 channel_quota_bytes = 4096
 max_payload_bytes = 1024
 rate_limit_per_min = 7
+trust_proxy_headers = true
 "#,
         )
         .unwrap();
@@ -147,6 +153,7 @@ rate_limit_per_min = 7
         assert_eq!(config.channel_quota_bytes, 4096);
         assert_eq!(config.max_payload_bytes, 1024);
         assert_eq!(config.rate_limit_per_min, 7);
+        assert!(config.trust_proxy_headers);
     }
 
     #[test]

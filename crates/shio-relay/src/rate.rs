@@ -69,12 +69,9 @@ impl RateLimiter {
             ENROLL_CODE_PER_MIN,
             now,
         )?;
-        check_key(
-            &mut inner,
-            &format!("e:ip:{}", ip.unwrap_or("unknown")),
-            ENROLL_IP_PER_MIN,
-            now,
-        )?;
+        if let Some(ip) = ip {
+            check_key(&mut inner, &format!("e:ip:{ip}"), ENROLL_IP_PER_MIN, now)?;
+        }
         Ok(())
     }
 
@@ -200,6 +197,15 @@ mod tests {
         assert!(limiter
             .check_enroll("another-code", Some("203.0.113.2"))
             .is_err());
+    }
+
+    #[test]
+    fn enroll_without_ip_only_applies_code_limit() {
+        let limiter = RateLimiter::new(60);
+        for _ in 0..ENROLL_CODE_PER_MIN {
+            assert!(limiter.check_enroll("code-none", None).is_ok());
+        }
+        assert!(limiter.check_enroll("code-none", None).is_err());
     }
 
     #[test]

@@ -50,17 +50,17 @@
           "desc": "A1 RateLimiter 定期移除过期窗口；窗口表不会无限增长；测试通过。",
           "id": "A1",
           "requires_human": false,
-          "status": "unverified",
-          "verified_at": null,
-          "verified_by": null
+          "status": "pass",
+          "verified_at": "2026-11-03T07:59:41Z",
+          "verified_by": "agent"
         }
       ],
       "archived_at": null,
       "archived_git_head": null,
       "created_at": "2026-11-03T07:58:06Z",
-      "current_step": "S3",
+      "current_step": null,
       "depends": [],
-      "finished_at": null,
+      "finished_at": "2026-11-03T07:59:41Z",
       "goal": "限流窗口定期清理",
       "id": "T1",
       "line": "server",
@@ -74,7 +74,7 @@
       "plan": "ops",
       "review_policy": "mixed",
       "skipped_count": 0,
-      "status": "in_progress",
+      "status": "done",
       "steps": [
         {
           "desc": "",
@@ -106,7 +106,7 @@
           "locked": false,
           "requires_review": false,
           "skipped_reason": null,
-          "status": "in_progress",
+          "status": "done",
           "title": "跑测试并提交"
         }
       ],
@@ -127,7 +127,7 @@
       "archived_at": null,
       "archived_git_head": null,
       "created_at": "2026-11-03T07:58:06Z",
-      "current_step": null,
+      "current_step": "S3",
       "depends": [],
       "finished_at": null,
       "goal": "可信代理配置",
@@ -144,8 +144,42 @@
       "plan": "ops",
       "review_policy": "mixed",
       "skipped_count": 0,
-      "status": "todo",
-      "steps": [],
+      "status": "in_progress",
+      "steps": [
+        {
+          "desc": "",
+          "id": "S1",
+          "jump_meta": null,
+          "lock_reason": null,
+          "locked": false,
+          "requires_review": false,
+          "skipped_reason": null,
+          "status": "done",
+          "title": "增加 trust_proxy_headers 配置"
+        },
+        {
+          "desc": "",
+          "id": "S2",
+          "jump_meta": null,
+          "lock_reason": null,
+          "locked": false,
+          "requires_review": false,
+          "skipped_reason": null,
+          "status": "done",
+          "title": "接入 client_ip 并补测试/文档"
+        },
+        {
+          "desc": "",
+          "id": "S3",
+          "jump_meta": null,
+          "lock_reason": null,
+          "locked": false,
+          "requires_review": false,
+          "skipped_reason": null,
+          "status": "in_progress",
+          "title": "提交"
+        }
+      ],
       "title": "可信代理配置",
       "uid": "tsk_01M6G6MP9FD9RMY73E3YBSNAH8"
     },

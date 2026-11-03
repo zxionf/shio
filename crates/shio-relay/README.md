@@ -21,6 +21,7 @@ frame_ttl_secs = 2592000        # 30 天
 channel_quota_bytes = 104857600 # 100 MB
 max_payload_bytes = 8388608     # 8 MiB
 rate_limit_per_min = 60
+trust_proxy_headers = false     # 反代可信时改为 true
 ```
 
 ## CLI

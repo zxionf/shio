@@ -23,10 +23,13 @@ frame_ttl_secs = 2592000        # 30 天
 channel_quota_bytes = 104857600 # 100 MB
 max_payload_bytes = 8388608     # 8 MiB；SHY2 仍受内核 4 MiB 限制
 rate_limit_per_min = 60
+trust_proxy_headers = true        # 仅当反代可信并覆盖 XFF 时开启
 ```
 
 - 公网只暴露 TLS 反代，`listen` 保持 `127.0.0.1`。
 - `max_payload_bytes` 必须 ≥ 4 MiB + 4；客户端仍会按内核 4 MiB 上限生成 SHY2 帧。
+- `trust_proxy_headers` 默认 `false`；关闭时忽略 `X-Forwarded-For` / `X-Real-IP`，
+  enroll 只按 code 限流。只有反代**覆盖**这两个头时才开启。
 
 ## 3. systemd
 
@@ -182,7 +185,8 @@ sudo systemctl enable --now shio-relay-gc.timer
 ## 9. 当前实现边界
 
 - 内置 TLS 未实现；按本文用 Caddy/nginx。
-- 限流：per-token 每分钟固定窗口 + 并发 4；`/v1/enroll` 按 code 10/min、IP 30/min（`X-Forwarded-For`/`X-Real-IP`）限流。
+- 限流：per-token 每分钟固定窗口 + 并发 4；`/v1/enroll` 按 code 10/min，
+  仅当 `trust_proxy_headers = true` 时再按 IP 30/min（`X-Forwarded-For`/`X-Real-IP`）。
 
 ## 10. 本地冒烟
 

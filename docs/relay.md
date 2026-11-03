@@ -184,6 +184,7 @@ frame_ttl_secs = 2592000        # 30 天
 channel_quota_bytes = 104857600 # 100 MB
 max_payload_bytes = 8388608     # 8 MiB；shio 帧仍受内核 4 MiB 限制
 rate_limit_per_min = 60
+trust_proxy_headers = false     # 仅当反代覆盖 XFF 时开启
 ```
 
 ```bash
