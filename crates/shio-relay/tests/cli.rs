@@ -75,6 +75,17 @@ fn cli_manages_channel_device_member_and_token() {
     assert!(stdout.contains(&format!("device={device}")));
     assert!(stdout.contains("acked_cursor=0"));
 
+    let output = run(&config, &["stats", "--channel", &channel, "--json"]);
+    assert_ok(&output);
+    let value: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
+    assert_eq!(value["channel_id"].as_str(), Some(channel.as_str()));
+    assert_eq!(value["next_seq"].as_i64(), Some(1));
+    assert_eq!(
+        value["members"][0]["device"].as_str(),
+        Some(device.as_str())
+    );
+    assert_eq!(value["members"][0]["acked_cursor"].as_i64(), Some(0));
+
     let output = run(&config, &["token", "rotate", "--device", &device]);
     assert_ok(&output);
     assert!(String::from_utf8_lossy(&output.stdout).contains("token:"));

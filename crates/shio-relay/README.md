@@ -41,6 +41,7 @@ relay --config relay.toml gc --dry-run
 relay --config relay.toml gc --now
 
 relay --config relay.toml stats --channel <cid>
+relay --config relay.toml stats --channel <cid> --json
 ```
 
 ## HTTP API

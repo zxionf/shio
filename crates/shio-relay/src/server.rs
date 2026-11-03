@@ -1,11 +1,13 @@
 //! HTTP 服务器、鉴权与 v1 API。
 
 use std::sync::Arc;
+use std::time::Instant;
 
 use axum::body::Bytes;
-use axum::extract::{DefaultBodyLimit, Path, Query, State};
+use axum::extract::{DefaultBodyLimit, Path, Query, Request, State};
 use axum::http::header::{AUTHORIZATION, CONTENT_TYPE};
 use axum::http::{HeaderMap, StatusCode};
+use axum::middleware::{self, Next};
 use axum::response::{IntoResponse, Response};
 use axum::routing::{delete, get, post};
 use axum::{Json, Router};
@@ -69,8 +71,25 @@ pub fn router(state: AppState) -> Router {
             delete(delete_membership),
         )
         .route("/v1/enroll", post(post_enroll))
+        .layer(middleware::from_fn(log_request))
         .layer(DefaultBodyLimit::max(max_body))
         .with_state(state)
+}
+
+async fn log_request(request: Request, next: Next) -> Response {
+    let method = request.method().clone();
+    let path = request.uri().path().to_owned();
+    let started = Instant::now();
+    let response = next.run(request).await;
+    let elapsed_ms = u64::try_from(started.elapsed().as_millis()).unwrap_or(u64::MAX);
+    tracing::info!(
+        %method,
+        path = %path,
+        status = response.status().as_u16(),
+        elapsed_ms,
+        "relay request"
+    );
+    response
 }
 
 async fn healthz() -> &'static str {

@@ -37,6 +37,9 @@ enum Command {
         /// channel ID。
         #[arg(long)]
         channel: String,
+        /// 输出 JSON。
+        #[arg(long)]
+        json: bool,
     },
     /// channel 运维。
     Channel {
@@ -147,10 +150,10 @@ async fn run() -> shio_relay::Result<()> {
             let db = Db::open(&config.data)?;
             gc(&config, &db, dry_run, now)
         }
-        Command::Stats { channel } => {
+        Command::Stats { channel, json } => {
             let config = Config::load(&cli.config)?;
             let db = Db::open(&config.data)?;
-            stats(&config, &db, &channel)
+            stats(&config, &db, &channel, json)
         }
         Command::Channel { command } => {
             let config = Config::load(&cli.config)?;
@@ -236,7 +239,7 @@ fn channel_list(db: &Db) -> shio_relay::Result<()> {
     Ok(())
 }
 
-fn stats(config: &Config, db: &Db, channel: &str) -> shio_relay::Result<()> {
+fn stats(config: &Config, db: &Db, channel: &str, json: bool) -> shio_relay::Result<()> {
     let channel_id = normalize_id(channel, "channel id must be 32 hex characters")?;
     let channel = db
         .with_conn(|conn| store::get_channel(conn, &channel_id))?
@@ -248,6 +251,32 @@ fn stats(config: &Config, db: &Db, channel: &str) -> shio_relay::Result<()> {
     let max_payload_bytes = channel
         .max_payload_bytes
         .unwrap_or_else(|| i64::try_from(config.max_payload_bytes).unwrap_or(i64::MAX));
+    if json {
+        let members: Vec<serde_json::Value> = members
+            .iter()
+            .map(|member| {
+                serde_json::json!({
+                    "device": member.device_id,
+                    "acked_cursor": member.acked_cursor,
+                })
+            })
+            .collect();
+        let value = serde_json::json!({
+            "channel_id": channel.channel_id,
+            "next_seq": channel.next_seq,
+            "retained_from": channel.retained_from,
+            "bytes": channel.bytes,
+            "quota_bytes": channel.quota_bytes,
+            "frame_ttl_secs": frame_ttl_secs,
+            "max_payload_bytes": max_payload_bytes,
+            "members": members,
+        });
+        println!(
+            "{}",
+            serde_json::to_string(&value).map_err(RelayError::Json)?
+        );
+        return Ok(());
+    }
     println!(
         "channel={} next_seq={} retained_from={} bytes={} quota={} frame_ttl_secs={} max_payload_bytes={}",
         channel.channel_id,
@@ -258,7 +287,7 @@ fn stats(config: &Config, db: &Db, channel: &str) -> shio_relay::Result<()> {
         frame_ttl_secs,
         max_payload_bytes
     );
-    for member in members {
+    for member in &members {
         println!(
             "device={} acked_cursor={}",
             member.device_id, member.acked_cursor

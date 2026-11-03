@@ -119,17 +119,17 @@
           "desc": "A1 trust_proxy_headers 默认 false；关闭时忽略 XFF/X-Real-IP，开启时才用于 enroll IP 限流；测试/文档通过。",
           "id": "A1",
           "requires_human": false,
-          "status": "unverified",
-          "verified_at": null,
-          "verified_by": null
+          "status": "pass",
+          "verified_at": "2026-11-03T08:01:59Z",
+          "verified_by": "agent"
         }
       ],
       "archived_at": null,
       "archived_git_head": null,
       "created_at": "2026-11-03T07:58:06Z",
-      "current_step": "S3",
+      "current_step": null,
       "depends": [],
-      "finished_at": null,
+      "finished_at": "2026-11-03T08:01:59Z",
       "goal": "可信代理配置",
       "id": "T2",
       "line": "server",
@@ -144,7 +144,7 @@
       "plan": "ops",
       "review_policy": "mixed",
       "skipped_count": 0,
-      "status": "in_progress",
+      "status": "done",
       "steps": [
         {
           "desc": "",
@@ -176,7 +176,7 @@
           "locked": false,
           "requires_review": false,
           "skipped_reason": null,
-          "status": "in_progress",
+          "status": "done",
           "title": "提交"
         }
       ],
@@ -197,7 +197,7 @@
       "archived_at": null,
       "archived_git_head": null,
       "created_at": "2026-11-03T07:58:06Z",
-      "current_step": null,
+      "current_step": "S3",
       "depends": [],
       "finished_at": null,
       "goal": "请求日志与 stats --json",
@@ -214,8 +214,42 @@
       "plan": "ops",
       "review_policy": "mixed",
       "skipped_count": 0,
-      "status": "todo",
-      "steps": [],
+      "status": "in_progress",
+      "steps": [
+        {
+          "desc": "",
+          "id": "S1",
+          "jump_meta": null,
+          "lock_reason": null,
+          "locked": false,
+          "requires_review": false,
+          "skipped_reason": null,
+          "status": "done",
+          "title": "增加请求日志中间件"
+        },
+        {
+          "desc": "",
+          "id": "S2",
+          "jump_meta": null,
+          "lock_reason": null,
+          "locked": false,
+          "requires_review": false,
+          "skipped_reason": null,
+          "status": "done",
+          "title": "实现 stats --json 与 CLI 测试"
+        },
+        {
+          "desc": "",
+          "id": "S3",
+          "jump_meta": null,
+          "lock_reason": null,
+          "locked": false,
+          "requires_review": false,
+          "skipped_reason": null,
+          "status": "in_progress",
+          "title": "跑测试并提交"
+        }
+      ],
       "title": "请求日志与 stats --json",
       "uid": "tsk_01M6G6MP9S1J6NCZV6KYQ1KRX7"
     },

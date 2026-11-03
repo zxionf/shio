@@ -140,8 +140,11 @@ server {
 ## 7. 监控与 GC
 
 - 健康检查：`curl -fsS http://127.0.0.1:8080/healthz` 或经 TLS 的 `https://relay.example.com/healthz`。
-- 日志：`journalctl -u shio-relay -f`；relay 不记 token、payload、content_type。
-- 磁盘/配额：`relay --config ... channel list`；`relay --config ... stats --channel <cid>` 查看 seq、字节、quota 与成员 ack；`relay --config ... gc --dry-run` 先看淘汰量，再 `gc --now`。
+- 日志：`journalctl -u shio-relay -f`；relay 不记 token、payload、content_type；
+  请求日志只记 method/path/status/耗时。
+- 磁盘/配额：`relay --config ... channel list`；`relay --config ... stats --channel <cid>`
+  查看 seq、字节、quota 与成员 ack；`--json` 输出可解析 JSON，便于监控采集；
+  `relay --config ... gc --dry-run` 先看淘汰量，再 `gc --now`。
 - 每日 GC timer（示例）：
 
 ```ini
